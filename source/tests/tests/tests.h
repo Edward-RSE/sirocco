@@ -14,7 +14,11 @@
 /* test_compton.c */
 void create_compton_test_suite (void);
 
+/* test_define_wind */
+void create_define_wind_test_suite (void);
+
 /* test_matrix.c */
 void create_matrix_test_suite (void);
+
 
 #endif

@@ -4,7 +4,7 @@ TARGET = py_unit_test
 
 I_FLAGS = -I$(PYTHON)/include
 L_FLAGS = -L$(PYTHON)/lib
-C_FLAGS = -O3 -Wall
+C_FLAGS = -O3 -Wall -Wno-deprecated-non-prototype
 CU_FLAGS = -O3
 
 INCLUDES =
@@ -42,7 +42,8 @@ CUDA_SOURCES = \
 TEST_SOURCES = \
 	unit_test_main.c \
 	tests/test_matrix.c \
-	tests/test_compton.c
+	tests/test_compton.c \
+	tests/test_define_wind.c
 
 # Using absolute paths
 PYTHON_SOURCES := $(patsubst %,$(PYTHON)/source/%, $(PYTHON_SOURCES))

@@ -196,7 +196,8 @@ set(TEST_SOURCE
     source/tests/tests/test_matrix.c
     source/tests/tests/test_compton.c
     ${PYTHON_SOURCE}
-        source/define_wind.c)
+        source/define_wind.c
+        source/tests/tests/test_define_wind.c)
 
 #${CUDA_SOURCE})
 
