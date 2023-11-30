@@ -32,7 +32,6 @@
 #include "atomic.h"
 #include "python.h"
 
-
 /**********************************************************/
 /**
  * @brief      cylin_ds_in_cell calculates the distance to the far
@@ -152,9 +151,7 @@ cylvar_ds_in_cell (ndom, p)
  **********************************************************/
 
 int
-cylvar_make_grid (w, ndom)
-     WindPtr w;
-     int ndom;
+cylvar_make_grid (int ndom, WindPtr w)
 {
   double dr, dz, dlogr, dlogz;
   double r, z_offset;

@@ -124,9 +124,7 @@ spherical_ds_in_cell (ndom, p)
  **********************************************************/
 
 int
-spherical_make_grid (w, ndom)
-     WindPtr w;
-     int ndom;
+spherical_make_grid (int ndom, WindPtr w)
 {
   double dr, dlogr;
   int j, n;

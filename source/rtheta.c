@@ -132,9 +132,7 @@ rtheta_ds_in_cell (ndom, p)
  **********************************************************/
 
 int
-rtheta_make_grid (w, ndom)
-     WindPtr w;
-     int ndom;
+rtheta_make_grid (int ndom, WindPtr w)
 {
   double dr, theta, thetacen, dtheta, dlogr;
   int i, j, n;

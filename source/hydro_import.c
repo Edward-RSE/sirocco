@@ -554,9 +554,7 @@ hydro_temp (x)
 
 
 int
-rtheta_make_hydro_grid (w, ndom)
-     WindPtr w;
-     int ndom;
+rtheta_make_hydro_grid (int ndom, WindPtr w)
 {
   double theta, thetacen, dtheta;
   int i, j, n;

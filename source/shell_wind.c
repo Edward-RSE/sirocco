@@ -196,9 +196,7 @@ get_shell_wind_params (ndom)
  **********************************************************/
 
 int
-shell_make_grid (w, ndom)
-     WindPtr w;
-     int ndom;
+shell_make_grid (int ndom, WindPtr w)
 {
   int n;
   int ndim;

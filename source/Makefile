@@ -199,7 +199,8 @@ python_objects = bb.o atomicdata.o atomicdata_init.o atomicdata_sub.o photon2d.o
 		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
 		reverb.o paths.o setup.o run.o brem.o synonyms.o walls.o xtest.o \
 		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o import_calloc.o charge_exchange.o frame.o \
-		macro_accelerate.o atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o
+		macro_accelerate.o atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o \
+		define_wind.o
 
 # For reasons that are unclear to me.  get_models.c cannot be included in the sources
 # Problems ocurr due to the prototypes that are generated.  ksl 160705
@@ -220,7 +221,8 @@ python_source= bb.c atomicdata.c atomicdata_init.c atomicdata_sub.c python.c pho
 		import.c import_spherical.c import_cylindrical.c import_rtheta.c\
 		reverb.c paths.c setup.c run.c brem.c synonyms.c walls.c xtest.c \
 		setup_reverb.c setup_line_transfer.c cv.c import_calloc.c charge_exchange.c frame.c \
-		macro_accelerate.c atomic_extern_init.c  python_extern_init.o  models_extern_init.c matrix_cpu.c
+		macro_accelerate.c atomic_extern_init.c  python_extern_init.o  models_extern_init.c matrix_cpu.c \
+		define_wind.c
 
 # kpar_source is now declared separately from python_source so that the file log.h
 # can be made using cproto
@@ -275,7 +277,8 @@ py_wind_objects = py_wind.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_w
 		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o \
 		time.o reverb.o paths.o synonyms.o cooling.o windsave2table_sub.o \
 		rdpar_init.o import_calloc.o walls.o charge_exchange.o frame.o \
-		macro_accelerate.o  atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o
+		macro_accelerate.o  atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o \
+		define_wind.o
 
 
 
@@ -300,7 +303,7 @@ table_objects = windsave2table.o windsave2table_sub.o atomicdata.o atomicdata_in
 		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
 		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
 		cooling.o import_calloc.o walls.o charge_exchange.o frame.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o
+		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
 
 
 rhf_objects = rad_hydro_files.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
@@ -316,7 +319,7 @@ rhf_objects = rad_hydro_files.o atomicdata.o atomicdata_init.o atomicdata_sub.o 
 		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
 		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
 		cooling.o import_calloc.o frame.o walls.o charge_exchange.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o
+		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
 
 
 run_indent:
@@ -353,7 +356,7 @@ modify_wind_objects = modify_wind.o windsave.o  windsave2table_sub.o\
 		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
 		cooling.o import_calloc.o walls.o charge_exchange.o frame.o \
 		atomicdata.o atomicdata_init.o atomicdata_sub.o spectra.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o
+		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
 
 
 modify_wind: startup $(modify_wind_objects) $(CUDA_OBJECTS)
@@ -377,7 +380,7 @@ inspect_wind_objects = inspect_wind.o windsave.o  windsave2table_sub.o\
 		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
 		cooling.o import_calloc.o walls.o charge_exchange.o frame.o \
 		atomicdata.o atomicdata_init.o atomicdata_sub.o spectra.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o
+		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
 
 
 
@@ -415,7 +418,7 @@ py_optd_obj = py_optd.o py_optd_output.o py_optd_trans.o py_optd_util.o \
 		reverb.o paths.o setup.o run.o brem.o synonyms.o walls.o xtest.o \
 		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o import_calloc.o charge_exchange.o frame.o \
 		macro_accelerate.o atomic_extern_init.o python_extern_init.o  models_extern_init.o \
-		py_optd_extern_init.o matrix_cpu.o
+		py_optd_extern_init.o matrix_cpu.o define_wind.o
 
 py_optd: startup $(py_optd_obj) $(CUDA_OBJECTS)
 	$(CC) $(CFLAGS) $(py_optd_obj) $(CUDA_OBJECTS) $(LDFLAGS) -o $@

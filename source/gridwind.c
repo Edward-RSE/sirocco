@@ -80,7 +80,7 @@
  **********************************************************/
 
 int
-create_maps ()
+create_wind_and_plasma_cell_maps ()
 {
   int i, j;
   j = 0;
@@ -97,7 +97,7 @@ create_maps ()
       if (wmain[i].inwind < 0)
       {
         Error
-          ("create_maps: wind cell %d (nplasma %d) has volume but not flagged as in wind! Critical error, could cause undefined behaviour. Exiting.\n",
+          ("create_wind_and_plasma_cell_maps: wind cell %d (nplasma %d) has volume but not flagged as in wind! Critical error, could cause undefined behaviour. Exiting.\n",
            i, j);
         Exit (0);
       }
@@ -108,14 +108,15 @@ create_maps ()
       if (wmain[i].inwind >= 0)
       {
         Error
-          ("create_maps: wind cell %d has zero volume but flagged inwind! Critical error, could cause undefined behaviour. Exiting.\n", i);
+          ("create_wind_and_plasma_cell_maps: wind cell %d has zero volume but flagged inwind! Critical error, could cause undefined behaviour. Exiting.\n",
+           i);
         Exit (0);
       }
     }
   }
   if (j != NPLASMA)
   {
-    Error ("create_maps: Problems with matching cells -- Expected %d Got %d\n", NPLASMA, j);
+    Error ("create_wind_and_plasma_cell_maps: Problems with matching cells -- Expected %d Got %d\n", NPLASMA, j);
     Exit (0);
   }
 
@@ -155,7 +156,7 @@ calloc_wind (nelem)
     free (wmain);
   }
 
-  wmain = (WindPtr) calloc (sizeof (wind_dummy), nelem + 1);
+  wmain = (WindPtr) calloc (nelem + 1, sizeof (wind_dummy));
 
   if (wmain == NULL)
   {
@@ -166,7 +167,7 @@ calloc_wind (nelem)
   {
     Log
       ("Allocated %10d bytes for each of %5d elements of             totaling %10.1f Mb\n",
-       sizeof (wind_dummy), nelem, 1.e-6 * nelem * sizeof (wind_dummy));
+       sizeof (wind_dummy), nelem + 1, 1.e-6 * (nelem + 1) * sizeof (wind_dummy));
   }
 
   return (0);

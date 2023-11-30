@@ -141,9 +141,7 @@ cylind_ds_in_cell (ndom, p)
  **********************************************************/
 
 int
-cylind_make_grid (ndom, w)
-     WindPtr w;
-     int ndom;
+cylind_make_grid (int ndom, WindPtr w)
 {
   double dr, dz, dlogr, dlogz, xfudge;
   int i, j, n;

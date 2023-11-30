@@ -141,6 +141,17 @@ init_geo ()
 
   geo.model_count = 0;          //The number of models read in
 
+  /* We should set the frame ASAP in the geo struct, so the grid initialisation
+   * functions know what frame we're working with */
+  if (rel_mode == REL_MODE_FULL)
+  {
+    geo.frame = CMF_FRAME;
+  }
+  else
+  {
+    geo.frame = OBS_FRAME;
+  }
+
   return (0);
 }
 
