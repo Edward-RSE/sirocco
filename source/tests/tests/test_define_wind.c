@@ -193,6 +193,7 @@ test_sv_cv_wind (void)
   {
     CU_FAIL_FATAL ("Unable to open test data for CV model");
   }
+
   /* For the CV model, we'll be looking at these parameters:
    * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
    * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
@@ -217,6 +218,10 @@ test_sv_cv_wind (void)
 
   while (fgets (test_data_line, TEST_DATA_LINELENGTH, fp) != NULL)
   {
+    /* Here's a reminder of the header
+     * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
+     * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
+     */
     const int n_read = sscanf (test_data_line,
                                "%d %d %le %le %le %le %d %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le",
                                &i, &j, &x, &z, &xcen, &zcen, &inwind, &v_x, &v_y, &v_z, &vol, &rho, &ne, &t_e, &t_r, &h1, &c4, &dv_x_dx,
@@ -229,27 +234,55 @@ test_sv_cv_wind (void)
     /* Convert wind indices into an n in 1d wmain */
     wind_ij_to_n (0, i, j, &n);
     wind_cell = &wmain[n];
-
-    /* cell positions */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[0], x, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[2], z, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[0], xcen, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[2], zcen, EPSILON);
-    CU_ASSERT_EQUAL_FATAL (wind_cell->inwind, inwind);
-    /* velocities */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[0], v_x, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[1], v_y, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[2], v_z, EPSILON);
-
-    /* Some things are stored in plasmamain instead */
     plasma_cell = &plasmamain[wind_cell->nplasma];
 
-    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->rho, rho, EPSILON);
-//    printf ("ne: %e %e\n", plasma_cell->ne, ne);
-//    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->ne, ne, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->t_e, t_e, EPSILON);
-    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->t_r, t_r, EPSILON);
+    /* cell positions */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[0], x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[2], z, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[0], xcen, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[2], zcen, FRACTIONAL_ERROR);
+    CU_ASSERT_EQUAL_FATAL (wind_cell->inwind, inwind);
+
+    /* The default behaviour of Python's output tools (e.g. windsave2table) is
+     * to ignore file which are not fully in the wind. So we shall also ignore
+     * them here */
+    if (wind_cell->inwind != W_ALL_INWIND)
+    {
+      continue;
+    }
+
+    /* velocities */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[0], v_x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[1], v_y, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[2], v_z, FRACTIONAL_ERROR);
+    /* velocity gradients */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[0][0], dv_x_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[0][1], dv_x_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[0][2], dv_x_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[1][0], dv_y_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[1][1], dv_y_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[1][2], dv_y_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[2][0], dv_z_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[2][1], dv_z_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[2][2], dv_z_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->div_v, div_v, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->dvds_max, dvds_max, FRACTIONAL_ERROR);
+    /* CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->dvds_ave, dvds_ave, FRACTIONAL_ERROR); */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xgamma, gamma, FRACTIONAL_ERROR);
+
+    /* Some things (plasma properties) are stored in plasma cells */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->rho, rho, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->ne, ne, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->t_e, t_e, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->t_r, t_r, FRACTIONAL_ERROR);
+
+    /* Ion abundances are tested in their number density relative to Hydrogen.
+     * This is the default output option in windsave2table */
+    const double n_h = rho2nh * plasma_cell->rho;
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->density[0] / (n_h * ele[0].abun), h1, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->density[8] / (n_h * ele[2].abun), c4, FRACTIONAL_ERROR);
   }
+
   fclose (fp);
 }
 

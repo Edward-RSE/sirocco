@@ -451,6 +451,7 @@ define_wind_velocities (void)
     {
       model_velocity (cell->ndom, cell->x, cell->v);
     }
+
     model_vgrad (cell->ndom, cell->x, cell->v_grad);
 
     if (rel_mode == REL_MODE_FULL)
@@ -694,11 +695,16 @@ create_wind_grid (void)
    * coordinate grid is done first, for obvious reasons, but we need to find
    * the volume next so we can determine which cells are in/out of the wind. */
   make_coordinate_grid ();
-  calculate_wind_volumes ();    /* this can be expensive */
+
 
   /* We should now be ready to define the velocity of the grid and related
    * properties */
   define_wind_velocities ();    /* this can be very expensive */
+
+  calculate_wind_volumes ();    /* this can be expensive */
+
+
+
 
   /* This wind *should* be fully initialised at this point, so we'll perform
    * some consistency checks to make sure everything is OK. Note that this
