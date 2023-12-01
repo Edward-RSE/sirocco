@@ -10,7 +10,10 @@
  *
  * ****************************************************************************************************************** */
 
+#ifdef MPI_ON
 #include <mpi.h>
+#endif
+
 #include <time.h>
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
