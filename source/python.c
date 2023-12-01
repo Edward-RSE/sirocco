@@ -655,7 +655,11 @@ main (argc, argv)
     wind_save (files.windsave);
     Log ("This was was run with the ---grid-only flag set, so quitting now wind has been defined.\n");
     error_summary ("wind definition only (--grid-only).");
-    exit (0);
+#ifdef MPI_ON
+    MPI_Barrier (MPI_COMM_WORLD);
+    MPI_Finalize ();
+#endif
+    return EXIT_SUCCESS;
   }
 
 
