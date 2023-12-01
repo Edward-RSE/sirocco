@@ -347,10 +347,15 @@ main (argc, argv)
 
   /* All operating modes */
   rdpar_comment ("Parameters associated with photon number, cycles,ionization and radiative transfer options");
-
+  /* Getting the atomic data has been moved here as when it was deeply nested in init_ionization, it made it very
+   * difficult to write unit tests or other tests. The key issue is that init_ionization is initialising too
+   * much all at once, which makes it very difficult to initialise or modify specific things for testing or debug
+   * purposes */
+  if (geo.run_type == RUN_TYPE_NEW)
+  {
+    rdstr ("Atomic_data", geo.atomic_filename);
+  }
   init_photons ();
-
-
   init_ionization ();
 
   /* Note: ksl - At this point, SYSTEM_TYPE_PREVIOUS refers both to a restart and to a situation where

@@ -10,7 +10,9 @@
  *
  * ****************************************************************************************************************** */
 
+#include <mpi.h>
 #include <time.h>
+#include <stdlib.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
@@ -20,8 +22,9 @@
 /* Python logging prototypes */
 #include "../log.h"
 
-/* Including templates.h has so undesired effects, so we'll define the prototypes
-   as we need them */
+/* Including templates.h also includes main() from another program for some
+ * reason, so we can't include python.h or templates.h. This means we need to
+ * define function prototypes manually */
 int init_rand (int seed);
 
 /** *******************************************************************************************************************
@@ -31,10 +34,34 @@ int init_rand (int seed);
  * ****************************************************************************************************************** */
 
 int
-main (void)
+main (int argc, char **argv)
 {
+  int my_rank;
+  int num_ranks;
+
+#ifdef MPI_ON
+  int mpi_err = MPI_Init (&argc, &argv);
+  if (mpi_err != EXIT_SUCCESS)
+  {
+    Error ("Failed to initialise MPI\n");
+    Exit (mpi_err);
+  }
+  MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);
+  MPI_Comm_size (MPI_COMM_WORLD, &num_ranks);
+#else
+  my_rank = 0;
+  num_ranks = 1;
+#endif
+
+  if (num_ranks != 1)
+  {
+    fprintf (stderr, "Using multiple MPI ranks is not supported\n");
+    return EXIT_FAILURE;
+  }
+
   /* I don't want any output from Python, thank you very much */
   Log_set_verbosity (0);
+  Log_set_mpi_rank (my_rank, num_ranks);
 
   /* Initialize the CUnit test registry */
   if (CU_initialize_registry () != CUE_SUCCESS)
@@ -54,7 +81,7 @@ main (void)
   CU_basic_set_mode (CU_BRM_VERBOSE);
   CU_basic_run_tests ();
 
-  const int num_tests_failed = CU_get_number_of_tests_failed ();
+  const int num_tests_failed = (int) CU_get_number_of_tests_failed ();
 
   if (num_tests_failed > 0)
   {
@@ -67,6 +94,10 @@ main (void)
 
   /* Clean up the CUnit registry */
   CU_cleanup_registry ();
+
+#ifdef MPI_ON
+  MPI_Finalize ();
+#endif
 
   return num_tests_failed;
 }
