@@ -200,7 +200,7 @@ call_invert_matrix (const char *test_name)
     CU_FAIL_MSG_FATAL ("`invert_matrix` failed with error");
   }
 
-  CU_CHECK_DOUBLE_ARRAY_EQ_FATAL (test_inverse, inverse, matrix_size, EPSILON);
+  CU_ASSERT_DOUBLE_ARRAY_EQUAL_FATAL (test_inverse, inverse, matrix_size, EPSILON);
 
   free (matrix);
   free (inverse);
@@ -258,7 +258,7 @@ call_solve_matrix (const char *test_name)
     CU_FAIL ("`solve_matrix` failed with error");
   }
 
-  CU_CHECK_DOUBLE_ARRAY_EQ_FATAL (test_vector_x, vector_x, vector_size, EPSILON);
+  CU_ASSERT_DOUBLE_ARRAY_EQUAL_FATAL (test_vector_x, vector_x, vector_size, EPSILON);
 
   free (matrix_a);
   free (vector_b);

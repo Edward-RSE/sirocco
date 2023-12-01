@@ -1,6 +1,6 @@
 /** ********************************************************************************************************************
  *
- *  @file test_define_cv_wind.c
+ *  @file test_sv_cv_wind.c
  *  @author Edward J. Parkinson (e.parkinson@soton.ac.uk)
  *  @date November 2023
  *
@@ -27,6 +27,7 @@ char ATOMIC_DATA_TARGET[LINELENGTH];
 char ATOMIC_DATA_DEST[LINELENGTH];
 
 #define PATH_SEPARATOR '/'
+#define TEST_DATA_LINELENGTH 2056
 
 /** *******************************************************************************************************************
  *
@@ -166,19 +167,90 @@ initialise_model_for_define_wind (const char *root_name)
  * ****************************************************************************************************************** */
 
 void
-test_define_cv_wind (void)
+test_sv_cv_wind (void)
 {
+  int n;
+  FILE *fp;
+  char test_data_line[TEST_DATA_LINELENGTH];
+  char test_data_filename[LINELENGTH];
+
+  WindPtr wind_cell;
+  PlasmaPtr plasma_cell;
+
   const int init_error = initialise_model_for_define_wind ("cv");
   if (init_error)
   {
-    CU_FAIL ("Unable to initialise CV model");
+    CU_FAIL_FATAL ("Unable to initialise CV model");
   }
 
   /* With the defined, we can try and create the wind */
   define_wind ();
 
   /* And now we can compare our created grid to the "ground truth" grid */
+  snprintf (test_data_filename, LINELENGTH, "%s/source/tests/test_data/define_wind/cv.grid.txt", PYTHON_ENV);
+  fp = fopen (test_data_filename, "r");
+  if (fp == NULL)
+  {
+    CU_FAIL_FATAL ("Unable to open test data for CV model");
+  }
+  /* For the CV model, we'll be looking at these parameters:
+   * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
+   * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
+   */
 
+  int i, j, inwind;
+  double x, z, xcen, zcen;
+  double v_x, v_y, v_z;
+  double vol, rho, ne, h1, c4;
+  double t_e, t_r;
+  double dv_x_dx, dv_x_dy, dv_x_dz;
+  double dv_y_dx, dv_y_dy, dv_y_dz;
+  double dv_z_dx, dv_z_dy, dv_z_dz;
+  double div_v, dvds_max;
+  double gamma;
+
+  /* Skip the first line */
+  if (fgets (test_data_line, TEST_DATA_LINELENGTH, fp) == NULL)
+  {
+    CU_FAIL_FATAL ("Unable to read first line of test data");
+  }
+
+  while (fgets (test_data_line, TEST_DATA_LINELENGTH, fp) != NULL)
+  {
+    const int n_read = sscanf (test_data_line,
+                               "%d %d %le %le %le %le %d %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le",
+                               &i, &j, &x, &z, &xcen, &zcen, &inwind, &v_x, &v_y, &v_z, &vol, &rho, &ne, &t_e, &t_r, &h1, &c4, &dv_x_dx,
+                               &dv_y_dx, &dv_z_dx, &dv_x_dy, &dv_y_dy, &dv_z_dy, &dv_x_dz, &dv_y_dz, &dv_z_dz, &div_v, &dvds_max, &gamma);
+    if (n_read != 29)
+    {
+      CU_FAIL_FATAL ("Test data is in an invalid format");
+    }
+
+    /* Convert wind indices into an n in 1d wmain */
+    wind_ij_to_n (0, i, j, &n);
+    wind_cell = &wmain[n];
+
+    /* cell positions */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[0], x, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[2], z, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[0], xcen, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[2], zcen, EPSILON);
+    CU_ASSERT_EQUAL_FATAL (wind_cell->inwind, inwind);
+    /* velocities */
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[0], v_x, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[1], v_y, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[2], v_z, EPSILON);
+
+    /* Some things are stored in plasmamain instead */
+    plasma_cell = &plasmamain[wind_cell->nplasma];
+
+    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->rho, rho, EPSILON);
+//    printf ("ne: %e %e\n", plasma_cell->ne, ne);
+//    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->ne, ne, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->t_e, t_e, EPSILON);
+    CU_ASSERT_DOUBLE_EQUAL_FATAL (plasma_cell->t_r, t_r, EPSILON);
+  }
+  fclose (fp);
 }
 
 /** *******************************************************************************************************************
@@ -295,7 +367,7 @@ create_define_wind_test_suite (void)
     exit (CU_get_error ());
   }
 
-  if ((CU_add_test (suite, "SV: Cataclysmic Variable", test_define_cv_wind) == NULL))
+  if ((CU_add_test (suite, "SV: Cataclysmic Variable", test_sv_cv_wind) == NULL))
   {
     fprintf (stderr, "Failed to add tests to `Define Wind` suite\n");
     CU_cleanup_registry ();
