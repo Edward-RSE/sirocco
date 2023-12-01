@@ -98,8 +98,8 @@
 /* definitions of what is logged at what verbosity level */
 
 #define SHOW_PARALLEL	    1
-#define SHOW_LOG  	    2
 #define SHOW_ERROR	    2
+#define SHOW_LOG  	    3
 #define SHOW_DEBUG	    4
 #define SHOW_LOG_SILENT     5
 #define SHOW_ERROR_SILENT   5
