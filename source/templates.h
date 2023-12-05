@@ -602,7 +602,7 @@ int init_observers (void);
 PhotPtr init_photons (void);
 int init_ionization (void);
 double setup_dfudge (void);
-void setup_atomic_data (const char *atomic_data);
+void setup_atomic_data (const char *atomic_filename);
 /* run.c */
 int calculate_ionization (int restart_stat);
 int make_spectra (int restart_stat);

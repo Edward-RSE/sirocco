@@ -26,7 +26,7 @@ char ATOMIC_DATA_TARGET[LINELENGTH];
 char ATOMIC_DATA_DEST[LINELENGTH];
 
 #define PATH_SEPARATOR '/'
-#define TEST_DATA_LINELENGTH 2056
+#define TEST_DATA_LENGTH 2056
 
 /** *******************************************************************************************************************
  *
@@ -91,6 +91,116 @@ set_atomic_data_filename (void)
 
 /** *******************************************************************************************************************
  *
+ * @brief Clean up after a model has run as a test case.
+ *
+ * @param [in]  root_name  The root name of the model in $PYTHON/source/tests/test_data/define_wind
+ *
+ * @details
+ *
+ * ****************************************************************************************************************** */
+
+int
+cleanup_model (const char *root_name)
+{
+  int n_row;
+  int n_plasma;
+  char parameter_filepath[LINELENGTH];
+
+  PlasmaPtr plasma_cell;
+  MacroPtr macro_cell;
+
+  snprintf (parameter_filepath, LINELENGTH, "%s/source/tests/test_data/define_wind/%s.pf", PYTHON_ENV, files.root);
+  if (cpar (parameter_filepath) != 1)   /* cpar returns 1 when something is "normal" */
+  {
+    return EXIT_FAILURE;
+  }
+
+  /* free dynamic grid properties */
+  free (wmain);
+
+  /* NPLASMA + 1 is the dummy plasma cell */
+  for (n_plasma = 0; n_plasma < NPLASMA + 1; ++n_plasma)
+  {
+    plasma_cell = &plasmamain[n_plasma];
+    free (plasma_cell->density);
+    free (plasma_cell->partition);
+    free (plasma_cell->ioniz);
+    free (plasma_cell->recomb);
+    free (plasma_cell->scatters);
+    free (plasma_cell->xscatters);
+    free (plasma_cell->heat_ion);
+    free (plasma_cell->heat_inner_ion);
+    free (plasma_cell->cool_rr_ion);
+    free (plasma_cell->lum_rr_ion);
+    free (plasma_cell->inner_recomb);
+    free (plasma_cell->inner_ioniz);
+    free (plasma_cell->cool_dr_ion);
+    free (plasma_cell->levden);
+    free (plasma_cell->recomb_simple);
+    free (plasma_cell->recomb_simple_upweight);
+    free (plasma_cell->kbf_use);
+  }
+
+  free (plasmamain);
+  free (photstoremain);
+  free (matomphotstoremain);    /* This one doesn't care about if macro atoms are used or not */
+
+  if (nlevels_macro > 0)
+  {
+    for (n_plasma = 0; n_plasma < NPLASMA + 1; n_plasma++)
+    {
+      macro_cell = &macromain[n_plasma];
+      free (macro_cell->jbar);
+      free (macro_cell->jbar_old);
+      free (macro_cell->gamma);
+      free (macro_cell->gamma_old);
+      free (macro_cell->gamma_e);
+      free (macro_cell->gamma_e_old);
+      free (macro_cell->alpha_st);
+      free (macro_cell->alpha_st_old);
+      free (macro_cell->alpha_st_e);
+      free (macro_cell->alpha_st_e_old);
+      free (macro_cell->recomb_sp);
+      free (macro_cell->recomb_sp_e);
+      free (macro_cell->matom_emiss);
+      free (macro_cell->matom_abs);
+      free (macro_cell->cooling_bf);
+      free (macro_cell->cooling_bf_col);
+      free (macro_cell->cooling_bb);
+
+      if (macro_cell->store_matom_matrix == TRUE)
+      {
+        for (n_row = 0; n_row < nlevels_macro + 1; ++n_row)
+        {
+          free (macro_cell->matom_matrix[n_row]);
+        }
+        free (macro_cell->matom_matrix);
+      }
+    }
+
+    free (macromain);
+  }
+
+  NPLASMA = 0;                  /* We probably don't need to do this, but better safe than sorry */
+
+  /* free atomic data elements */
+  free (ele);
+  free (ion);
+  free (xconfig);
+  free (line);
+  free (auger_macro);
+
+  ele = NULL;
+  ion = NULL;
+  xconfig = NULL;
+  line = NULL;
+  auger_macro = NULL;
+
+  return EXIT_SUCCESS;
+}
+
+/** *******************************************************************************************************************
+ *
  * @brief Initialise all the necessary parameters to define the wind
  *
  * @param [in]  root_name  The root name of the model in $PYTHON/source/tests/test_data/define_wind
@@ -114,8 +224,12 @@ initialise_model_for_define_wind (const char *root_name)
   /* Set up parameter file, that way we can get all the parameters from that
    * instead of defining them manually */
   strcpy (files.root, root_name);
-  snprintf (parameter_filepath, LINELENGTH, "%s/source/tests/test_data/define_wind/%s.pf", PYTHON_ENV, root_name);
-  opar (parameter_filepath);
+  snprintf (parameter_filepath, LINELENGTH, "%s/source/tests/test_data/define_wind/%s.pf", PYTHON_ENV, files.root);
+  if (opar (parameter_filepath) != 2)   /* opar returns 2 when reading for the parameter file */
+  {
+    fprintf (stderr, "Unable to read from parameter file %s.pf", files.root);
+    return EXIT_FAILURE;
+  }
 
   /* Now when we call the initialisation functions or use rdXXX, the rdchoice_choices
    * for the parameter will come from the parameter file */
@@ -137,6 +251,10 @@ initialise_model_for_define_wind (const char *root_name)
   get_bl_and_agn_params (star_lum);
   get_disk_params ();
 
+  /* We should now be able to initialise everything else which seems to have
+   * some dependence on the ionisation settings or atomic data */
+  init_ionization ();
+
   /* We have to be a bit creative with the atomic data, to munge the correct
    * filepath with what's in the parameter file */
   rdstr ("Atomic_data", geo.atomic_filename);
@@ -146,9 +264,6 @@ initialise_model_for_define_wind (const char *root_name)
   }
   setup_atomic_data (geo.atomic_filename);
 
-  /* We should now be able to initialise everything else which seems to have
-   * some dependence on the ionisation settings or atomic data */
-  init_ionization ();
   for (n_dom = 0; n_dom < geo.ndomain; ++n_dom)
   {
     get_domain_params (n_dom);
@@ -158,6 +273,45 @@ initialise_model_for_define_wind (const char *root_name)
   DFUDGE = setup_dfudge ();
 
   return EXIT_SUCCESS;
+}
+
+/** *******************************************************************************************************************
+ *
+ * @brief Test an SV wind model for an AGN system with macro atoms.
+ *
+ * @details
+ *
+ * This uses the data from $PYTHON/source/tests/test_data/define_wind/cv.pf and
+ * $PYTHON/source/tests/test_data/define_wind/cv.grid.txt. The latter was created using the Python script in the
+ * $PYTHON/source/tests/test_data/define_wind directory.
+ *
+ * ****************************************************************************************************************** */
+
+void
+test_sv_agn_macro_wind (void)
+{
+  int n;
+  FILE *fp;
+  char test_data_line[TEST_DATA_LENGTH];
+  char test_data_filename[LINELENGTH];
+
+  WindPtr wind_cell;
+  PlasmaPtr plasma_cell;
+
+  const int init_error = initialise_model_for_define_wind ("agn_macro");
+  if (init_error)
+  {
+    CU_FAIL_FATAL ("Unable to initialise AGN Macro model");
+  }
+
+  define_wind ();
+
+  snprintf (test_data_filename, LINELENGTH, "%s/source/tests/test_data/define_wind/agn_macro.grid.txt", PYTHON_ENV);
+  fp = fopen (test_data_filename, "r");
+  if (fp == NULL)
+  {
+    CU_FAIL_FATAL ("Unable to open test data for AGN Macro");
+  }
 }
 
 /** *******************************************************************************************************************
@@ -177,7 +331,7 @@ test_sv_cv_wind (void)
 {
   int n;
   FILE *fp;
-  char test_data_line[TEST_DATA_LINELENGTH];
+  char test_data_line[TEST_DATA_LENGTH];
   char test_data_filename[LINELENGTH];
 
   WindPtr wind_cell;
@@ -213,12 +367,12 @@ test_sv_cv_wind (void)
   double gamma;
 
   /* Skip the first line */
-  if (fgets (test_data_line, TEST_DATA_LINELENGTH, fp) == NULL)
+  if (fgets (test_data_line, TEST_DATA_LENGTH, fp) == NULL)
   {
     CU_FAIL_FATAL ("Unable to read first line of test data");
   }
 
-  while (fgets (test_data_line, TEST_DATA_LINELENGTH, fp) != NULL)
+  while (fgets (test_data_line, TEST_DATA_LENGTH, fp) != NULL)
   {
     /* Here's what the header of the file should look like:
      * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
@@ -285,6 +439,7 @@ test_sv_cv_wind (void)
   }
 
   fclose (fp);
+  cleanup_model ("cv");
 }
 
 /** *******************************************************************************************************************
@@ -410,7 +565,8 @@ create_define_wind_test_suite (void)
     exit (CU_get_error ());
   }
 
-  if ((CU_add_test (suite, "SV: Cataclysmic Variable", test_sv_cv_wind) == NULL))
+  if ((CU_add_test (suite, "SV: Cataclysmic Variable", test_sv_cv_wind) == NULL) ||
+      (CU_add_test (suite, "SV: AGN Macro", test_sv_agn_macro_wind) == NULL))
   {
     fprintf (stderr, "Failed to add tests to `Define Wind` suite\n");
     CU_cleanup_registry ();

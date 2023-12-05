@@ -810,21 +810,6 @@ fixed concentration file. \n\
     }
   }
 
-  /* Prevent bf calculation of macro_estimators when no macro atoms are present.   */
-
-  if (nlevels_macro == 0)
-    geo.macro_simple = TRUE;    // Make everything simple if no macro atoms -- 57h
-
-  /* initialise the choice of handling for macro pops. */
-  if (geo.run_type == RUN_TYPE_PREVIOUS)
-  {
-    geo.macro_ioniz_mode = MACRO_IONIZ_MODE_ESTIMATORS; // Now that macro atom properties are available for restarts
-  }
-  else
-  {
-    geo.macro_ioniz_mode = MACRO_IONIZ_MODE_NO_ESTIMATORS;
-  }
-
   return (0);
 
 }
@@ -905,27 +890,24 @@ setup_dfudge ()
 
 /**********************************************************/
 /**
- * @brief
+ * @brief Initialise the atomic data
  *
  * @details
  *
  **********************************************************/
 
 void
-setup_atomic_data (const char *atomic_data)
+setup_atomic_data (const char *atomic_filename)
 {
   int rc;                       // Return code from running Setup_Py_Dir
   struct stat file_stat;        // Used to check the atomic data exists
   char answer[LINELENGTH];
-
 
   /* read a variable which controls whether to save a summary of atomic data
      this is defined in atomic.h, rather than the modes structure */
 
   if (modes.iadvanced)
   {
-
-
     strcpy (answer, "no");
     write_atomicdata = rdchoice ("@Diag.write_atomicdata(yes,no)", "1,0", answer);
     if (write_atomicdata)
@@ -938,19 +920,19 @@ setup_atomic_data (const char *atomic_data)
    * try to run Setup_Py_Dir. If both fail, then warn the user and exit Python
    */
 
-  if (stat (geo.atomic_filename, &file_stat))
+  if (stat (atomic_filename, &file_stat))
   {
-    Log ("Unable to open atomic masterfile %s\n", geo.atomic_filename);
+    Log ("Unable to open atomic masterfile %s\n", atomic_filename);
     Log ("Running Setup_Py_Dir to try and fix the situation\n");
     rc = system ("Setup_Py_Dir");
     if (rc)
     {
-      Error ("Unable to open %s and run Setup_Py_Dir\n", geo.atomic_filename);
+      Error ("Unable to open %s and run Setup_Py_Dir\n", atomic_filename);
       Exit (1);
     }
   }
 
-  get_atomic_data (geo.atomic_filename);
+  get_atomic_data ((char *) atomic_filename);
 
   /* throw a fatal error if there are macro-atom levels but rt_mode is non macro */
   if (nlevels_macro > 0 && geo.rt_mode != RT_MODE_MACRO)
@@ -959,4 +941,21 @@ setup_atomic_data (const char *atomic_data)
     Log ("Try changing either to a simple data set or to macro-atom line transfer\n");
     Exit (1);
   }
+
+  /* Prevent bf calculation of macro_estimators when no macro atoms are present.   */
+  if (nlevels_macro == 0)
+  {
+    geo.macro_simple = TRUE;    // Make everything simple if no macro atoms -- 57h
+  }
+  /* initialise the choice of handling for macro pops. */
+  if (geo.run_type == RUN_TYPE_PREVIOUS)
+  {
+    geo.macro_ioniz_mode = MACRO_IONIZ_MODE_ESTIMATORS; // Now that macro atom properties are available for restarts
+  }
+  else
+  {
+    geo.macro_ioniz_mode = MACRO_IONIZ_MODE_NO_ESTIMATORS;
+  }
+
+
 }
