@@ -429,17 +429,11 @@ make_coordinate_grid (void)
  **********************************************************/
 
 static void
-define_wind_velocities (void)
+define_wind_velocities (const int n_start, const int n_stop, const int n_cells_rank)
 {
   int n_wind;
-  int n_start;
-  int n_stop;
   double v_cen[3];
   WindPtr cell;
-
-  /* TODO: set up in parallel */
-  n_start = 0;
-  n_stop = NDIM2;
 
   /* Compute the model velocity. These need to be defined before we can
    * compute velocity gradients and velocity divergence */
@@ -468,12 +462,8 @@ define_wind_velocities (void)
     }
   }
 
-#ifdef MPI_ON
-  /* At this point we need to communicate the velocities, as dvds_max needs
-   * to know about its neighbouring cells. How we do this is up for debate, to
-   * minimise communication costs we could just communicate the edges using a
-   * derived type */
-#endif
+  /* TODO: only communicate the wind cells */
+  communicate_wind_cells (n_start, n_stop, n_cells_rank);
 
   /* With the velocity define, we are now able to compute the divergence
    * and the velocity gradients */
@@ -676,6 +666,17 @@ create_wind_grid (void)
 {
   int n;
   int ndom;
+  int n_start;
+  int n_stop;
+  int n_cells_rank;
+
+#ifdef MPI_ON
+  n_cells_rank = get_parallel_nrange (rank_global, NDIM2, np_mpi_global, &n_start, &n_stop);
+#else
+  n_start = 0;
+  n_stop = NDIM2;
+  n_cells_rank = NDIM2;
+#endif
 
   calloc_wind (NDIM2);
 
@@ -693,14 +694,15 @@ create_wind_grid (void)
   /* The first thing we need to do to is to make the coordinate system of the
    * grid and then determine the volume of each cell which has been created. The
    * coordinate grid is done first, for obvious reasons, but we need to find
-   * the volume next so we can determine which cells are in/out of the wind. */
+   * the volume next so we can determine which cells are in/out of the wind.
+   * TODO: both of these work over NDOM
+   * */
   make_coordinate_grid ();
   calculate_wind_volumes ();    /* this can be expensive */
 
   /* We should now be ready to define the velocity of the grid and related
    * properties */
-  define_wind_velocities ();    /* this can be very expensive */
-
+  define_wind_velocities (n_start, n_stop, n_cells_rank);       /* this can be very expensive */
 
   /* This wind *should* be fully initialised at this point, so we'll perform
    * some consistency checks to make sure everything is OK. Note that this
@@ -708,9 +710,8 @@ create_wind_grid (void)
    * cells in the wind) */
   complete_wind_grid_creation ();
 
-#ifdef MPI_ON
   /* At this point we should make sure every rank has a completed wind grid */
-#endif
+  communicate_wind_cells (n_start, n_stop, n_cells_rank);
 }
 
 /**********************************************************/
