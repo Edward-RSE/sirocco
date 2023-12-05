@@ -195,11 +195,6 @@ get_line_transfer_mode ()
     geo.wind_radiation = rdchoice ("Wind.radiation(yes,no)", "1,0", answer);
   }
 
-  if (geo.run_type == RUN_TYPE_NEW)
-  {
-    setup_atomic_data (geo.atomic_filename);
-  }
-
   return (0);
 }
 
