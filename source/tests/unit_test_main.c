@@ -20,7 +20,7 @@
 #include <CUnit/Basic.h>
 
 /* Test suite prototypes */
-#include "tests/tests.h"
+#include "tests/suites.h"
 
 /* Python logging prototypes */
 #include "../log.h"

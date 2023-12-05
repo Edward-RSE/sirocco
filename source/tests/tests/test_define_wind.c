@@ -1,14 +1,13 @@
 /** ********************************************************************************************************************
  *
- *  @file test_sv_cv_wind.c
+ *  @file test_define_wind.c
  *  @author Edward J. Parkinson (e.parkinson@soton.ac.uk)
  *  @date November 2023
  *
- *  @brief
+ *  @brief Unit tests for `define_wind`
  *
  * ****************************************************************************************************************** */
 
-#include <time.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,10 +30,11 @@ char ATOMIC_DATA_DEST[LINELENGTH];
 
 /** *******************************************************************************************************************
  *
- * @brief
+ * @brief Get the last component in a file path.
  *
  * @details
  *
+ * This will return the file name and extension within a file path.
  *
  * ****************************************************************************************************************** */
 
@@ -47,14 +47,17 @@ get_last_component (const char *path)
 
 /** *******************************************************************************************************************
  *
- * @brief
+ * @brief Find the location of the atomic data, relative to a model.
  *
  * @details
+ *
+ * This function exists to modify the atomic data in the parameter file to make it an absolute path to where
+ * it has been set at suite initialisation.
  *
  * ****************************************************************************************************************** */
 
 int
-get_atomic_data_filepath (void)
+set_atomic_data_filename (void)
 {
   char temp_filepath[LINELENGTH];
   char atomic_data_filepath[LINELENGTH];
@@ -137,7 +140,7 @@ initialise_model_for_define_wind (const char *root_name)
   /* We have to be a bit creative with the atomic data, to munge the correct
    * filepath with what's in the parameter file */
   rdstr ("Atomic_data", geo.atomic_filename);
-  if (get_atomic_data_filepath ())
+  if (set_atomic_data_filename ())
   {
     return EXIT_FAILURE;
   }
@@ -159,10 +162,13 @@ initialise_model_for_define_wind (const char *root_name)
 
 /** *******************************************************************************************************************
  *
- * @brief
+ * @brief Test a SV wind model for a CV system.
  *
  * @details
  *
+ * This uses the data from $PYTHON/source/tests/test_data/define_wind/cv.pf and
+ * $PYTHON/source/tests/test_data/define_wind/cv.grid.txt. The latter was created using the Python script in the
+ * $PYTHON/source/tests/test_data/define_wind directory.
  *
  * ****************************************************************************************************************** */
 
@@ -194,11 +200,7 @@ test_sv_cv_wind (void)
     CU_FAIL_FATAL ("Unable to open test data for CV model");
   }
 
-  /* For the CV model, we'll be looking at these parameters:
-   * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
-   * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
-   */
-
+  /* For the CV model, we'll be looking at these parameters */
   int i, j, inwind;
   double x, z, xcen, zcen;
   double v_x, v_y, v_z;
@@ -218,14 +220,14 @@ test_sv_cv_wind (void)
 
   while (fgets (test_data_line, TEST_DATA_LINELENGTH, fp) != NULL)
   {
-    /* Here's a reminder of the header
+    /* Here's what the header of the file should look like:
      * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
      * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
      */
-    const int n_read = sscanf (test_data_line,
-                               "%d %d %le %le %le %le %d %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le",
-                               &i, &j, &x, &z, &xcen, &zcen, &inwind, &v_x, &v_y, &v_z, &vol, &rho, &ne, &t_e, &t_r, &h1, &c4, &dv_x_dx,
-                               &dv_y_dx, &dv_z_dx, &dv_x_dy, &dv_y_dy, &dv_z_dy, &dv_x_dz, &dv_y_dz, &dv_z_dz, &div_v, &dvds_max, &gamma);
+    const short n_read = sscanf (test_data_line,
+                                 "%d %d %le %le %le %le %d %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le",
+                                 &i, &j, &x, &z, &xcen, &zcen, &inwind, &v_x, &v_y, &v_z, &vol, &rho, &ne, &t_e, &t_r, &h1, &c4, &dv_x_dx,
+                                 &dv_y_dx, &dv_z_dx, &dv_x_dy, &dv_y_dy, &dv_z_dy, &dv_x_dz, &dv_y_dz, &dv_z_dz, &div_v, &dvds_max, &gamma);
     if (n_read != 29)
     {
       CU_FAIL_FATAL ("Test data is in an invalid format");
@@ -237,10 +239,10 @@ test_sv_cv_wind (void)
     plasma_cell = &plasmamain[wind_cell->nplasma];
 
     /* cell positions */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[0], x, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->x[2], z, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[0], xcen, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xcen[2], zcen, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->x[0], x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->x[2], z, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xcen[0], xcen, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xcen[2], zcen, FRACTIONAL_ERROR);
     CU_ASSERT_EQUAL_FATAL (wind_cell->inwind, inwind);
 
     /* The default behaviour of Python's output tools (e.g. windsave2table) is
@@ -252,35 +254,34 @@ test_sv_cv_wind (void)
     }
 
     /* velocities */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[0], v_x, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[1], v_y, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v[2], v_z, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[0], v_x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[1], v_y, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[2], v_z, FRACTIONAL_ERROR);
     /* velocity gradients */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[0][0], dv_x_dx, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[0][1], dv_x_dy, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[0][2], dv_x_dz, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[1][0], dv_y_dx, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[1][1], dv_y_dy, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[1][2], dv_y_dz, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[2][0], dv_z_dx, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[2][1], dv_z_dy, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->v_grad[2][2], dv_z_dz, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->div_v, div_v, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->dvds_max, dvds_max, FRACTIONAL_ERROR);
-    /* CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->dvds_ave, dvds_ave, FRACTIONAL_ERROR); */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (wind_cell->xgamma, gamma, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][0], dv_x_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][1], dv_x_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][2], dv_x_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][0], dv_y_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][1], dv_y_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][2], dv_y_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][0], dv_z_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][1], dv_z_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][2], dv_z_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->div_v, div_v, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->dvds_max, dvds_max, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xgamma, gamma, FRACTIONAL_ERROR);
 
     /* Some things (plasma properties) are stored in plasma cells */
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->rho, rho, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->ne, ne, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->t_e, t_e, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->t_r, t_r, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->rho, rho, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->ne, ne, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->t_e, t_e, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->t_r, t_r, FRACTIONAL_ERROR);
 
     /* Ion abundances are tested in their number density relative to Hydrogen.
      * This is the default output option in windsave2table */
     const double n_h = rho2nh * plasma_cell->rho;
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->density[0] / (n_h * ele[0].abun), h1, FRACTIONAL_ERROR);
-    CU_ASSERT_DOUBLE_EQUAL_FRAC_FATAL (plasma_cell->density[8] / (n_h * ele[2].abun), c4, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->density[0] / (n_h * ele[0].abun), h1, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->density[8] / (n_h * ele[2].abun), c4, FRACTIONAL_ERROR);
   }
 
   fclose (fp);
@@ -288,10 +289,12 @@ test_sv_cv_wind (void)
 
 /** *******************************************************************************************************************
  *
- * @brief
+ * @brief Clean up after the `define_wind` tests have run.
  *
  * @details
  *
+ * This will deallocate the dynamic memory allocated for the domain structure and will also remove the symbolic link
+ * to the atomic data from the test directory.
  *
  * ****************************************************************************************************************** */
 
@@ -310,10 +313,17 @@ suite_teardown (void)
 
 /** *******************************************************************************************************************
  *
- * @brief
+ * @brief Initialise the testing suite for testing `define_wind`
  *
  * @details
  *
+ * To be able to create a plasma grid, we need atomic data. The main purpose of this function is to figure out where
+ * the tests are being run and to create a symbolic link to the atomic data and to   create file paths to the atomic
+ * data. This function will also initialise some global properties in Python, allocating space for the domain structure
+ * and, initialise the geometry structure and initialising MPI if that is required. Note that the unit tests should only
+ * ever be run using a single MPI rank.
+ *
+ * Also sets some global variables (to this file) associated with environment variables.
  *
  * ****************************************************************************************************************** */
 
