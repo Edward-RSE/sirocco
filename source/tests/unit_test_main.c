@@ -63,7 +63,8 @@ main (int argc, char **argv)
   }
 
   /* I don't want any output from Python, thank you very much */
-  Log_set_verbosity (6);
+  Log_set_verbosity (0);
+  rdpar_set_verbose (0);
   Log_set_mpi_rank (my_rank, num_ranks);
 
   /* Initialize the CUnit test registry */

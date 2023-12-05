@@ -20,12 +20,12 @@ Disk.rad_type_to_make_wind(bb,models)                   bb
 Disk.temperature.profile(standard,readin)             standard
 Disk.mdot(msol/yr)                         1e-8
 Disk.radmax(cm)                            2.4e+10
+Atomic_data                                data/standard80_reduced.dat
 Wind.ionization(on.the.spot,ML93,LTE_tr,LTE_te,fixed,matrix_bb,matrix_pow,matrix_est)            matrix_bb
 Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms_escape_prob,macro_atoms_thermal_trapping)     thermal_trapping
 Wind.radiation(yes,no)                          yes
 Surface.reflection.or.absorption(reflect,absorb,thermalized.rerad)               absorb
 Wind_heating.extra_processes(none,adiabatic,nonthermal,both)            adiabatic
-Atomic_data                                data/standard80_reduced.dat
 Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)                   sv
 Wind.coord_system(spherical,cylindrical,polar,cyl_var)          cylindrical
 Wind.dim.in.x_or_r.direction               30

@@ -30,6 +30,30 @@ char ATOMIC_DATA_DEST[LINELENGTH];
 
 /** *******************************************************************************************************************
  *
+ * @brief Free a pointer and set to NULL
+ *
+ * @param [in]  void** ptr  An address to the pointer to free and set to null
+ *
+ * @details
+ *
+ * To use this function, you need to pass the address of a pointer cast as void**, e.g.
+ *
+ *      free_and_null((void**) &wmain);
+ *
+ * ****************************************************************************************************************** */
+
+void
+free_and_null (void **ptr)
+{
+  if (ptr != NULL & *ptr != NULL)
+  {
+    free (*ptr);
+    *ptr = NULL;
+  }
+}
+
+/** *******************************************************************************************************************
+ *
  * @brief Get the last component in a file path.
  *
  * @details
@@ -115,8 +139,11 @@ cleanup_model (const char *root_name)
     return EXIT_FAILURE;
   }
 
+  /* free domains */
+  free_and_null ((void **) &zdom);
+
   /* free dynamic grid properties */
-  free (wmain);
+  free_and_null ((void **) &wmain);
 
   /* NPLASMA + 1 is the dummy plasma cell */
   for (n_plasma = 0; n_plasma < NPLASMA + 1; ++n_plasma)
@@ -141,9 +168,9 @@ cleanup_model (const char *root_name)
     free (plasma_cell->kbf_use);
   }
 
-  free (plasmamain);
-  free (photstoremain);
-  free (matomphotstoremain);    /* This one doesn't care about if macro atoms are used or not */
+  free_and_null ((void **) &plasmamain);
+  free_and_null ((void **) &photstoremain);
+  free_and_null ((void **) &matomphotstoremain);        /* This one doesn't care about if macro atoms are used or not */
 
   if (nlevels_macro > 0)
   {
@@ -178,23 +205,19 @@ cleanup_model (const char *root_name)
       }
     }
 
-    free (macromain);
+    free_and_null ((void **) &macromain);
   }
 
+  NDIM2 = 0;
   NPLASMA = 0;                  /* We probably don't need to do this, but better safe than sorry */
 
   /* free atomic data elements */
-  free (ele);
-  free (ion);
-  free (xconfig);
-  free (line);
-  free (auger_macro);
+  free_and_null ((void **) &ele);
+  free_and_null ((void **) &ion);
+  free_and_null ((void **) &xconfig);
+  free_and_null ((void **) &line);
+  free_and_null ((void **) &auger_macro);
 
-  ele = NULL;
-  ion = NULL;
-  xconfig = NULL;
-  line = NULL;
-  auger_macro = NULL;
 
   return EXIT_SUCCESS;
 }
@@ -221,6 +244,8 @@ initialise_model_for_define_wind (const char *root_name)
   char rdchoice_choices[LINELENGTH];
   char parameter_filepath[LINELENGTH];
 
+  geo.run_type = RUN_TYPE_NEW;
+
   /* Set up parameter file, that way we can get all the parameters from that
    * instead of defining them manually */
   strcpy (files.root, root_name);
@@ -231,6 +256,14 @@ initialise_model_for_define_wind (const char *root_name)
     return EXIT_FAILURE;
   }
 
+  zdom = calloc (MaxDom, sizeof (domain_dummy));        /* We'll allocate MaxDom to follow python */
+  if (zdom == NULL)
+  {
+    fprintf (stderr, "Unable to allocate space for domain structure\n");
+    return EXIT_FAILURE;
+  }
+  init_geo ();
+
   /* Now when we call the initialisation functions or use rdXXX, the rdchoice_choices
    * for the parameter will come from the parameter file */
   rdint ("Wind.number_of_components", &geo.ndomain);
@@ -239,7 +272,6 @@ initialise_model_for_define_wind (const char *root_name)
     fprintf (stderr, "Using more domains (%d) in model than MaxDom (%d)\n", geo.ndomain, MaxDom);
     return EXIT_FAILURE;
   }
-  geo.run_type = RUN_TYPE_NEW;
   strncpy (rdchoice_answer, "star", LINELENGTH);
   snprintf (rdchoice_choices, LINELENGTH, "%d,%d,%d,%d,%d", SYSTEM_TYPE_STAR, SYSTEM_TYPE_CV, SYSTEM_TYPE_BH, SYSTEM_TYPE_AGN,
             SYSTEM_TYPE_PREVIOUS);
@@ -251,10 +283,6 @@ initialise_model_for_define_wind (const char *root_name)
   get_bl_and_agn_params (star_lum);
   get_disk_params ();
 
-  /* We should now be able to initialise everything else which seems to have
-   * some dependence on the ionisation settings or atomic data */
-  init_ionization ();
-
   /* We have to be a bit creative with the atomic data, to munge the correct
    * filepath with what's in the parameter file */
   rdstr ("Atomic_data", geo.atomic_filename);
@@ -262,8 +290,11 @@ initialise_model_for_define_wind (const char *root_name)
   {
     return EXIT_FAILURE;
   }
-  setup_atomic_data (geo.atomic_filename);
 
+  /* We should now be able to initialise everything else which seems to have
+   * some dependence on the ionisation settings or atomic data */
+  init_ionization ();
+  setup_atomic_data (geo.atomic_filename);
   for (n_dom = 0; n_dom < geo.ndomain; ++n_dom)
   {
     get_domain_params (n_dom);
@@ -532,13 +563,7 @@ suite_init (void)
   /* Now initialise the things Python will need to work, and things which aren't
    * specific to the model being tested such as the domain allocation */
   rel_mode = REL_MODE_FULL;
-  zdom = calloc (MaxDom, sizeof (DomainPtr));   /* We'll allocate MaxDom to follow python */
-  if (zdom == NULL)
-  {
-    fprintf (stderr, "Unable to allocate space for domain structure\n");
-    return EXIT_FAILURE;
-  }
-  init_geo ();
+
 
   return EXIT_SUCCESS;
 }
