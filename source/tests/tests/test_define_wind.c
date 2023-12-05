@@ -6,6 +6,8 @@
  *
  *  @brief Unit tests for `define_wind`
  *
+ *  TODO: checking actual against test data should be modular, rather than copy and paste
+ *
  * ****************************************************************************************************************** */
 
 #include <errno.h>
@@ -132,6 +134,8 @@ cleanup_model (const char *root_name)
 
   PlasmaPtr plasma_cell;
   MacroPtr macro_cell;
+
+  (void) root_name;
 
   snprintf (parameter_filepath, LINELENGTH, "%s/source/tests/test_data/define_wind/%s.pf", PYTHON_ENV, files.root);
   if (cpar (parameter_filepath) != 1)   /* cpar returns 1 when something is "normal" */
@@ -312,9 +316,11 @@ initialise_model_for_define_wind (const char *root_name)
  *
  * @details
  *
- * This uses the data from $PYTHON/source/tests/test_data/define_wind/cv.pf and
- * $PYTHON/source/tests/test_data/define_wind/cv.grid.txt. The latter was created using the Python script in the
+ * This uses the data from $PYTHON/source/tests/test_data/define_wind/agn_macro.pf and
+ * $PYTHON/source/tests/test_data/define_wind/agn_macro.grid.txt. The latter was created using the Python script in the
  * $PYTHON/source/tests/test_data/define_wind directory.
+ *
+ * TODO: we don't check anything to do with macro atoms (we don't output this from windsave2table)
  *
  * ****************************************************************************************************************** */
 
@@ -343,6 +349,93 @@ test_sv_agn_macro_wind (void)
   {
     CU_FAIL_FATAL ("Unable to open test data for AGN Macro");
   }
+
+  /* For the CV model, we'll be looking at these parameters */
+  int i, j, inwind;
+  double x, z, xcen, zcen;
+  double v_x, v_y, v_z;
+  double vol, rho, ne, h1, c4;
+  double t_e, t_r;
+  double dv_x_dx, dv_x_dy, dv_x_dz;
+  double dv_y_dx, dv_y_dy, dv_y_dz;
+  double dv_z_dx, dv_z_dy, dv_z_dz;
+  double div_v, dvds_max;
+  double gamma;
+
+  /* Skip the first line */
+  if (fgets (test_data_line, TEST_DATA_LENGTH, fp) == NULL)
+  {
+    CU_FAIL_FATAL ("Unable to read first line of test data");
+  }
+
+  while (fgets (test_data_line, TEST_DATA_LENGTH, fp) != NULL)
+  {
+    /* Here's what the header of the file should look like:
+     * # i j x z xcen zcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
+     * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
+     */
+    const short n_read = sscanf (test_data_line,
+                                 "%d %d %le %le %le %le %d %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le",
+                                 &i, &j, &x, &z, &xcen, &zcen, &inwind, &v_x, &v_y, &v_z, &vol, &rho, &ne, &t_e, &t_r, &h1, &c4, &dv_x_dx,
+                                 &dv_y_dx, &dv_z_dx, &dv_x_dy, &dv_y_dy, &dv_z_dy, &dv_x_dz, &dv_y_dz, &dv_z_dz, &div_v, &dvds_max, &gamma);
+    if (n_read != 29)
+    {
+      CU_FAIL_FATAL ("Test data is in an invalid format");
+    }
+
+    /* Convert wind indices into an n in 1d wmain */
+    wind_ij_to_n (0, i, j, &n);
+    wind_cell = &wmain[n];
+    plasma_cell = &plasmamain[wind_cell->nplasma];
+
+    /* cell positions */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->x[0], x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->x[2], z, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xcen[0], xcen, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xcen[2], zcen, FRACTIONAL_ERROR);
+    CU_ASSERT_EQUAL_FATAL (wind_cell->inwind, inwind);
+
+    /* The default behaviour of Python's output tools (e.g. windsave2table) is
+     * to ignore file which are not fully in the wind. So we shall also ignore
+     * them here */
+    if (wind_cell->inwind != W_ALL_INWIND)
+    {
+      continue;
+    }
+
+    /* velocities */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[0], v_x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[1], v_y, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[2], v_z, FRACTIONAL_ERROR);
+    /* velocity gradients */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][0], dv_x_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][1], dv_x_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][2], dv_x_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][0], dv_y_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][1], dv_y_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][2], dv_y_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][0], dv_z_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][1], dv_z_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][2], dv_z_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->div_v, div_v, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->dvds_max, dvds_max, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xgamma, gamma, FRACTIONAL_ERROR);
+
+    /* Some things (plasma properties) are stored in plasma cells */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->rho, rho, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->ne, ne, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->t_e, t_e, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->t_r, t_r, FRACTIONAL_ERROR);
+
+    /* Ion abundances are tested in their number density relative to Hydrogen.
+     * This is the default output option in windsave2table */
+    const double n_h = rho2nh * plasma_cell->rho;
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->density[0] / (n_h * ele[0].abun), h1, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->density[8] / (n_h * ele[2].abun), c4, FRACTIONAL_ERROR);
+  }
+
+  fclose (fp);
+  cleanup_model ("agn_macro");
 }
 
 /** *******************************************************************************************************************
