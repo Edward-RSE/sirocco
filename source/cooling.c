@@ -398,7 +398,7 @@ wind_cooling (void)
     }
   }
 
-  communicate_wind_cooling (n_start, n_stop, n_do);
+  broadcast_wind_cooling (n_start, n_stop, n_do);
 
   /* This part probably does not need to be done in parallel, as NPLASMA will
    * generally always be small enough to not cause a huge bottleneck from summing

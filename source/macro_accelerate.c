@@ -1060,7 +1060,7 @@ calc_all_matom_matrices ()
   print_timer_duration (message, timer_t0);
 
   /* this deals with communicating the matrices between threads (does nothing in serial mode) */
-  communicate_matom_matrices ();
+  broadcast_macro_atom_B_matrices ();
 
   /* flag the matrix rates as known */
   for (n = 0; n < NPLASMA; n++)

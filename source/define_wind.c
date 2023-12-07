@@ -249,6 +249,7 @@ create_plasma_grid (void)
   int ierr;
   int n_start;
   int n_stop;
+  int n_cells_rank;
 
   double rrstar;
   double xcen[3];
@@ -261,9 +262,13 @@ create_plasma_grid (void)
     Exit (EXIT_FAILURE);
   }
 
-  /* TODO: set up in parallel */
+#ifdef MPI_ON
+  n_cells_rank = get_parallel_nrange (rank_global, NPLASMA, np_mpi_global, &n_start, &n_stop);
+#else
   n_start = 0;
   n_stop = NPLASMA;
+  n_cells_rank = NPLASMA;
+#endif
 
   calloc_plasma (NPLASMA);
   calloc_dyn_plasma (NPLASMA);
@@ -342,6 +347,8 @@ create_plasma_grid (void)
   /* zero the counters which record diagnostics for mean_intensity */
   nerr_Jmodel_wrong_freq = 0;
   nerr_no_Jmodel = 0;
+
+  broadcast_plasma_grid (n_start, n_stop, n_cells_rank);
 }
 
 /**********************************************************/
@@ -423,9 +430,6 @@ make_coordinate_grid (void)
  * parallelised, the edge cells in a rank's workload will not calculate the
  * correct dv/ds or divergence for vertex properties.
  *
- * TODO: parallelise over NDIM2
- * TODO: communicate halo cells for dv/ds calculation
- *
  **********************************************************/
 
 static void
@@ -435,8 +439,8 @@ define_wind_velocities (const int n_start, const int n_stop, const int n_cells_r
   double v_cen[3];
   WindPtr cell;
 
-  /* Compute the model velocity. These need to be defined before we can
-   * compute velocity gradients and velocity divergence */
+  /* Compute the velocity and gradient for each cell. These need to be defined
+   * before we can compute velocity gradients and velocity divergence */
   for (n_wind = n_start; n_wind < n_stop; ++n_wind)
   {
     cell = &wmain[n_wind];
@@ -462,11 +466,14 @@ define_wind_velocities (const int n_start, const int n_stop, const int n_cells_r
     }
   }
 
-  /* TODO: only communicate the wind cells */
-  communicate_wind_cells (n_start, n_stop, n_cells_rank);
+  /* Take a break to make sure each rank has the velocity for all cells (see
+   * next comment for reason) */
+  broadcast_wind_velocity (n_start, n_stop, n_cells_rank);
 
-  /* With the velocity define, we are now able to compute the divergence
-   * and the velocity gradients */
+  /* With the velocity defined, we are now able to compute the divergence
+   * and the velocity gradients. These calculations need to know the velocity
+   * in adjacent cells, hence why there is call to communicate the velocities
+   * before this loop */
   for (n_wind = n_start; n_wind < n_stop; ++n_wind)
   {
     cell = &wmain[n_wind];
@@ -711,7 +718,7 @@ create_wind_grid (void)
   complete_wind_grid_creation ();
 
   /* At this point we should make sure every rank has a completed wind grid */
-  communicate_wind_cells (n_start, n_stop, n_cells_rank);
+  broadcast_wind_grid (n_start, n_stop, n_cells_rank);
 }
 
 /**********************************************************/

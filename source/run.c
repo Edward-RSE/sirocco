@@ -322,9 +322,9 @@ calculate_ionization (restart_stat)
 
 #ifdef MPI_ON
 
-    communicate_estimators_para ();
+    broadcast_simple_estimators ();
 
-    communicate_matom_estimators_para ();       // this will return 0 if nlevels_macro == 0
+    reduce_macro_atom_estimators ();    // this will return 0 if nlevels_macro == 0
 #endif
 
 
@@ -362,7 +362,7 @@ calculate_ionization (restart_stat)
 
 #ifdef MPI_ON
 
-    gather_spectra_para ();
+    gather_extracted_spectrum ();
 
 #endif
 
@@ -651,7 +651,7 @@ make_spectra (restart_stat)
 
     /* Do an MPI reduce to get the spectra all gathered to the master thread */
 #ifdef MPI_ON
-    gather_spectra_para ();
+    gather_extracted_spectrum ();
 #endif
 
 

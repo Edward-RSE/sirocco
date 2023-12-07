@@ -324,7 +324,7 @@ get_matom_f (mode)
 
     /*This is the end of the update loop that is parallelised. We now need to exchange data between the tasks.
        This is done much the same way as in wind_update */
-    communicate_macro_atom_emissivities (my_nmin, my_nmax, my_n_cells);
+    broadcast_macro_atom_emissivities (my_nmin, my_nmax, my_n_cells);
 
   }                             // end of if loop which controls whether to compute the emissivities or not
 
@@ -503,7 +503,7 @@ get_matom_f_accelerate (mode)
 
     /*This is the end of the update loop that is parallelised. We now need to exchange data between the tasks.
        This is done much the same way as in wind_update */
-    communicate_macro_atom_emissivities (my_nmin, my_nmax, my_n_cells);
+    broadcast_macro_atom_emissivities (my_nmin, my_nmax, my_n_cells);
 
     for (i = 0; i < nrows; i++)
     {

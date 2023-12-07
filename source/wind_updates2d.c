@@ -152,10 +152,10 @@ wind_update (WindPtr w)
 
   /*This is the end of the update loop that is parallised. We now need to exchange data between the tasks. */
 
-  communicate_plasma_cells (my_nmin, my_nmax, n_cells_rank);
+  broadcast_updated_plasma_properties (my_nmin, my_nmax, n_cells_rank);
   if (geo.rt_mode == RT_MODE_MACRO && geo.macro_simple == FALSE)
   {
-    communicate_macro_cells (my_nmin, my_nmax, n_cells_rank);
+    broadcast_updated_macro_atom_properties (my_nmin, my_nmax, n_cells_rank);
   }
 
   /* Now we need to updated the densities immediately outside the wind so that the density interpolation in resonate will work.
@@ -752,7 +752,7 @@ init_macro_rad_properties (void)
     }
   }
 
-  communicate_macro_recomb_sp_recomb_simple (n_start, n_stop, n_cells);
+  broadcast_macro_atom_recomb (n_start, n_stop, n_cells);
 }
 
 /**********************************************************/

@@ -103,7 +103,7 @@ wind_luminosity (double f1, double f2, int mode)
     total_emission (&plasmamain[n_plasma], f1, f2);
   }
 
-  communicate_wind_luminosity (n_start, n_stop, n_cells_rank);
+  broadcast_wind_luminosity (n_start, n_stop, n_cells_rank);
 
   total_lum = 0.0;
   lum_lines = 0.0;
