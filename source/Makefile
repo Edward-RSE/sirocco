@@ -154,7 +154,10 @@ startup:
 	echo "#define GIT_COMMIT_HASH" \"$(GIT_COMMIT_HASH)\" >> version.h
 	echo "#define GIT_DIFF_STATUS" $(GIT_DIFF_STATUS)\ >> version.h
 
-
+version:
+	echo "#define VERSION " \"$(VERSION)\" > version.h
+	echo "#define GIT_COMMIT_HASH" \"$(GIT_COMMIT_HASH)\" >> version.h
+	echo "#define GIT_DIFF_STATUS" $(GIT_DIFF_STATUS)\ >> version.h
 
 # To ensure a uniform style within .c programs, we enforce a indent style on .c code whe
 # modifications are made. For this portion of the installation to work properly, one must have
@@ -200,7 +203,7 @@ python_objects = bb.o atomicdata.o atomicdata_init.o atomicdata_sub.o photon2d.o
 		reverb.o paths.o setup.o run.o brem.o synonyms.o walls.o xtest.o \
 		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o import_calloc.o charge_exchange.o frame.o \
 		macro_accelerate.o atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o \
-		define_wind.o
+		define_wind.o communicate_wind.o communicate_plasma.o communicate_macro.o
 
 # For reasons that are unclear to me.  get_models.c cannot be included in the sources
 # Problems ocurr due to the prototypes that are generated.  ksl 160705
@@ -222,7 +225,7 @@ python_source= bb.c atomicdata.c atomicdata_init.c atomicdata_sub.c python.c pho
 		reverb.c paths.c setup.c run.c brem.c synonyms.c walls.c xtest.c \
 		setup_reverb.c setup_line_transfer.c cv.c import_calloc.c charge_exchange.c frame.c \
 		macro_accelerate.c atomic_extern_init.c  python_extern_init.o  models_extern_init.c matrix_cpu.c \
-		define_wind.c
+		define_wind.c communicate_wind.c communicate_plasma.c communicate_macro.c
 
 # kpar_source is now declared separately from python_source so that the file log.h
 # can be made using cproto
@@ -241,7 +244,7 @@ prototypes:
 	cproto  -I$(INCLUDE) recipes.c random.c cdf.c vvector.c > math_proto.h
 
 # Recipe to create CUDA object code. If NVCC is blank, then nothing happens
-# in thie recipe
+# in this recipe
 $(CUDA_OBJECTS): $(CUDA_SOURCE)
 ifneq ($(CUDA_FLAG),)
 	$(NVCC) $(NVCC_FLAGS) -DCUDA_ON -I$(INCLUDE) -c $< -o $@
@@ -259,29 +262,22 @@ python: startup python.o $(python_objects) $(CUDA_OBJECTS)
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
 
-#This line is jsut so you can use make D python for debugging
+#This line is just so you can use make D python for debugging
 D:
 	@echo 'Debugging Mode'
 
-py_wind_objects = py_wind.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
-		emission.o recomb.o wind_util.o para_update.o \
-		cdf.o random.o recipes.o saha.o \
-		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
-		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
-		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o spectra.o density.o \
-		matom.o estimators_macro.o photon2d.o cylindrical.o rtheta.o spherical.o \
-		import.o import_spherical.o import_cylindrical.o import_rtheta.o \
-		cylind_var.o bilinear.o gridwind.o py_wind_macro.o partition.o \
-		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
-		bb.o rdpar.o xlog.o direct_ion.o diag.o matrix_ion.o \
-		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o \
-		time.o reverb.o paths.o synonyms.o cooling.o windsave2table_sub.o \
-		rdpar_init.o import_calloc.o walls.o charge_exchange.o frame.o \
-		macro_accelerate.o  atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o \
-		define_wind.o
+# Define the objects for the helper programs. They, in general, they all need
+# to link with all of Python due to how interlinked a lot of it is.
 
+py_wind_objects = py_wind.o py_wind_ion.o py_wind_macro.o py_wind_sub.o py_wind_write.o $(python_objects)
+table_objects = windsave2table.o $(python_objects) # windsave2table_sub.o is already part of $(python_objects)
+rhf_objects = rad_hydro_files.o $(python_objects)
+modify_wind_objects = modify_wind.o $(python_objects)
+inspect_wind_objects = inspect_wind.o $(python_objects)
+py_optd_obj = py_optd.o py_optd_output.o py_optd_trans.o py_optd_util.o py_optd_extern_init.o $(python_objects)
 
-
+run_indent:
+	../py_progs/run_indent.py -all_no_headers
 
 py_wind: startup $(py_wind_objects) $(CUDA_OBJECTS)
 	$(CC) $(CFLAGS) $(py_wind_objects) $(CUDA_OBJECTS) $(LDFLAGS) -o py_wind
@@ -289,50 +285,11 @@ py_wind: startup $(py_wind_objects) $(CUDA_OBJECTS)
 	mv $@ $(BIN)/py_wind$(VERSION)
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
-
-table_objects = windsave2table.o windsave2table_sub.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
-		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o para_update.o\
-		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
-		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
-		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o spectra.o density.o \
-		matom.o estimators_macro.o photon2d.o cylindrical.o rtheta.o spherical.o \
-		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
-		cylind_var.o bilinear.o gridwind.o py_wind_macro.o partition.o \
-		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
-		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
-		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
-		cooling.o import_calloc.o walls.o charge_exchange.o frame.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
-
-
-rhf_objects = rad_hydro_files.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
-		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o para_update.o\
-		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
-		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
-		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o spectra.o density.o \
-		matom.o estimators_macro.o photon2d.o cylindrical.o rtheta.o spherical.o \
-		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
-		cylind_var.o bilinear.o gridwind.o py_wind_macro.o partition.o \
-		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
-		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
-		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
-		cooling.o import_calloc.o frame.o walls.o charge_exchange.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
-
-
-run_indent:
-	../py_progs/run_indent.py -all_no_headers
-
-
 windsave2table: startup $(table_objects) $(CUDA_OBJECTS)
 	$(CC) $(CFLAGS) $(table_objects) $(CUDA_OBJECTS) $(LDFLAGS) -o windsave2table
 	cp $@ $(BIN)
 	mv $@ $(BIN)/windsave2table$(VERSION)
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
-
-
 
 rad_hydro_files: startup $(rhf_objects) $(CUDA_OBJECTS)
 	$(CC) $(CFLAGS) $(rhf_objects) $(CUDA_OBJECTS) $(LDFLAGS) -o rad_hydro_files
@@ -340,49 +297,11 @@ rad_hydro_files: startup $(rhf_objects) $(CUDA_OBJECTS)
 	mv $@ $(BIN)/rad_hydro_files$(VERSION)
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
-
-
-modify_wind_objects = modify_wind.o windsave.o  windsave2table_sub.o\
-		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o para_update.o\
-		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
-		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
-		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o density.o \
-		matom.o estimators_macro.o photon2d.o cylindrical.o rtheta.o spherical.o \
-		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
-		cylind_var.o bilinear.o gridwind.o py_wind_macro.o partition.o \
-		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
-		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
-		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
-		cooling.o import_calloc.o walls.o charge_exchange.o frame.o \
-		atomicdata.o atomicdata_init.o atomicdata_sub.o spectra.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
-
-
 modify_wind: startup $(modify_wind_objects) $(CUDA_OBJECTS)
 	$(CC) $(CFLAGS) $(modify_wind_objects) $(CUDA_OBJECTS) $(LDFLAGS) -o modify_wind
 	cp $@ $(BIN)
 	mv $@ $(BIN)/modify_wind$(VERSION)
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
-
-
-inspect_wind_objects = inspect_wind.o windsave.o  windsave2table_sub.o\
-		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o para_update.o\
-		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
-		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
-		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o density.o \
-		matom.o estimators_macro.o photon2d.o cylindrical.o rtheta.o spherical.o \
-		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
-		cylind_var.o bilinear.o gridwind.o py_wind_macro.o partition.o \
-		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
-		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
-		pi_rates.o photon_gen_matom.o  macro_gen_f.o macro_gov.o reverb.o paths.o time.o synonyms.o \
-		cooling.o import_calloc.o walls.o charge_exchange.o frame.o \
-		atomicdata.o atomicdata_init.o atomicdata_sub.o spectra.o macro_accelerate.o \
-		atomic_extern_init.o python_extern_init.o  models_extern_init.o matrix_cpu.o define_wind.o
-
-
 
 inspect_wind: startup $(inspect_wind_objects) $(CUDA_OBJECTS)
 	$(CC) $(CFLAGS) $(inspect_wind_objects) $(CUDA_OBJECTS) $(LDFLAGS)  -o inspect_wind
@@ -390,6 +309,11 @@ inspect_wind: startup $(inspect_wind_objects) $(CUDA_OBJECTS)
 	mv $@ $(BIN)/inspect_wind$(VERSION)
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
+py_optd: startup $(py_optd_obj) $(CUDA_OBJECTS)
+	$(CC) $(CFLAGS) $(py_optd_obj) $(CUDA_OBJECTS) $(LDFLAGS) -o $@
+	cp $@ $(BIN)
+	mv $@ $(BIN)/py_optd$(VERSION)
+	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
 # unit_tests allows one to test low level routines, but one must be aware that one needs to define
 # everything in the main routine before one can probe a particular routine.
@@ -399,45 +323,15 @@ unit_test: startup unit_test.o $(python_objects)
 	# Fix indenting, if necessary.
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
-py_optd_obj = py_optd.o py_optd_output.o py_optd_trans.o py_optd_util.o \
-		bb.o atomicdata.o atomicdata_init.o atomicdata_sub.o photon2d.o photon_gen.o parse.o setup_files.o \
-		saha.o spectra.o wind2d.o wind.o  vvector.o recipes.o disk_photon_gen.o\
-		trans_phot.o phot_util.o resonate.o radiation.o estimators_simple.o\
-		wind_updates2d.o windsave.o extract.o cdf.o roche.o random.o \
-		stellar_wind.o homologous.o hydro_import.o corona.o knigge.o  disk.o\
-		lines.o  continuum.o get_models.o emission.o cooling.o recomb.o diag.o \
-		sv.o ionization.o  levels.o gradv.o \
-		anisowind.o wind_util.o density.o  bands.o time.o \
-		matom.o estimators_macro.o wind_sum.o cylindrical.o rtheta.o spherical.o  \
-		cylind_var.o bilinear.o gridwind.o partition.o signal.o  \
-		agn.o shell_wind.o compton.o zeta.o dielectronic.o \
-		spectral_estimators.o matom_diag.o disk_init.o \
-		xlog.o rdpar.o direct_ion.o pi_rates.o matrix_ion.o para_update.o \
-		setup_star_bh.o setup_domains.o setup_disk.o photon_gen_matom.o  macro_gen_f.o macro_gov.o windsave2table_sub.o \
-		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
-		reverb.o paths.o setup.o run.o brem.o synonyms.o walls.o xtest.o \
-		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o import_calloc.o charge_exchange.o frame.o \
-		macro_accelerate.o atomic_extern_init.o python_extern_init.o  models_extern_init.o \
-		py_optd_extern_init.o matrix_cpu.o define_wind.o
-
-py_optd: startup $(py_optd_obj) $(CUDA_OBJECTS)
-	$(CC) $(CFLAGS) $(py_optd_obj) $(CUDA_OBJECTS) $(LDFLAGS) -o $@
-	cp $@ $(BIN)
-	mv $@ $(BIN)/py_optd$(VERSION)
-	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
-
 # The next recipe is used to run the unit tests, using the same CC and NVCC as
 # the Python source. It doesn't require anything to be compiled, actually, as
 # the Makefile in tests/ will compile what is requried
-
 check:
 	cd tests; make check NVCC=$(NVCC) CC=$(CC)
 
 # The next line runs recompiles all of the routines after first cleaning the directory
 # all: clean run_indent python windsave2table py_wind
-
 all: clean python windsave2table py_wind indent rad_hydro_files modify_wind inspect_wind py_optd
-
 
 FILE = atomicdata.o atomicdata_init.o atomicdata_sub.o atomic.o
 
@@ -446,8 +340,6 @@ libatomic.a:  atomicdata.o atomicdata_init.o atomic.o
 	ranlib libatomic.a
 	mv libatomic.a $(LIB)
 	cp atomic.h  $(INCLUDE)
-
-
 
 clean :
 	rm -f *.o  *~
