@@ -233,7 +233,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   kap_cont = kap_es + kap_bf_tot + kap_ff;      //total continuum opacity in CMF frame
 
   /* 
-    Multiply by scale factor to get to observer frame
+     Multiply by scale factor to get to observer frame
 
      The conversion factor for the opacity at least for electron scattering can be understood as occuring
      in two parts, one is a conversion of densities from the local frame to the observer frame, and
@@ -241,9 +241,9 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
      is going against the flow, thatn when the photon is moving in the direction of the flow.
 
      230918 - The current version of this added in 87e
-     */
+   */
 
-  kap_cont_obs = kap_cont * observer_to_local_frame_ds (p, 1.); 
+  kap_cont_obs = kap_cont * observer_to_local_frame_ds (p, 1.);
 
 
   /* Finally begin the loop over the resonances that can interact
