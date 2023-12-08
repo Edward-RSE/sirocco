@@ -632,10 +632,10 @@ rtheta_make_hydro_grid (int ndom, WindPtr w)
 
 /**********************************************************/
 /**
- * @brief	Computes volumes for cells in an r-theta hydro model
+ * @brief	Computes the volume for a cell in an r-theta hydro model
  *
- * @param [in] ndom			The number of the domain which will be populated by the geometry
- * @param [in] w			The wind pointer
+ * @param [in,out] WindPtr  w   a single wind cell to calculate the volume for
+ *
  * @return 					0 if successful
  *
  *   rtheta_zeus_volumes replaces rtheta_volumes for a zeus model.
@@ -648,42 +648,37 @@ rtheta_make_hydro_grid (int ndom, WindPtr w)
 
 
 int
-rtheta_hydro_volumes (ndom, w)
-     int ndom;
-     WindPtr w;
+rtheta_hydro_cell_volume (WindPtr w)
 {
-  int i, j, n;
+  int i, j;
+  int ndom;
   double rmin, rmax, thetamin, thetamax;
   DomainPtr one_dom;
 
+  ndom = w->ndom;
   one_dom = &zdom[ndom];
+  wind_n_to_ij (ndom, w->nwind, &i, &j);
 
-  for (i = 0; i < one_dom->ndim; i++)
+  if (w->inwind == W_ALL_INWIND)
   {
-    for (j = 0; j < one_dom->mdim; j++)
+
+    rmin = one_dom->wind_x[i];
+    rmax = one_dom->wind_x[i + 1];
+    thetamin = one_dom->wind_z[j] / RADIAN;
+    thetamax = one_dom->wind_z[j + 1] / RADIAN;
+
+    //leading factor of 2 added to allow for volume above and below plane (SSMay04)
+    w->vol = 2. * 2. / 3. * PI * (rmax * rmax * rmax - rmin * rmin * rmin) * (cos (thetamin) - cos (thetamax));
+
+    if (w->vol == 0.0)
     {
-
-      wind_ij_to_n (ndom, i, j, &n);
-      if (w[n].inwind == W_ALL_INWIND)
-      {
-
-        rmin = one_dom->wind_x[i];
-        rmax = one_dom->wind_x[i + 1];
-        thetamin = one_dom->wind_z[j] / RADIAN;
-        thetamax = one_dom->wind_z[j + 1] / RADIAN;
-
-        //leading factor of 2 added to allow for volume above and below plane (SSMay04)
-        w[n].vol = 2. * 2. / 3. * PI * (rmax * rmax * rmax - rmin * rmin * rmin) * (cos (thetamin) - cos (thetamax));
-
-        if (w[n].vol == 0.0)
-        {
-          Log ("Found wind cell (%i) with no volume (%e) in wind, resetting\n", n, w[n].vol);
-          w[n].inwind = W_NOT_INWIND;
-        }
-      }
-      else
-        w[n].vol = 0.0;
+      Log ("Found wind cell (%i) with no volume (%e) in wind, resetting\n", w->nwind, w->vol);
+      w->inwind = W_NOT_INWIND;
     }
+  }
+  else
+  {
+    w->vol = 0.0;
   }
 
   return (0);

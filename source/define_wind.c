@@ -498,47 +498,57 @@ define_wind_velocities (const int n_start, const int n_stop, const int n_cells_r
  * Compute the volume of each cell given the specific coordinate system for
  * each domain.
  *
- * TODO: this needs to be unwrapped into a loop over NDIM2
- *
  **********************************************************/
 
 static void
 calculate_wind_volumes (void)
 {
   int ndom;
+  int n_wind;
+  int n_start;
+  int n_stop;
 
-  for (ndom = 0; ndom < geo.ndomain; ndom++)
+  WindPtr wind_cell;
+
+#ifdef MPI_ON
+  get_parallel_nrange (rank_global, NDIM2, np_mpi_global, &n_start, &n_stop);
+#else
+  n_start = 0;
+  n_stop = NDIM2;
+#endif
+
+  for (n_wind = n_start; n_wind < n_stop; ++n_wind)
   {
+    wind_cell = &wmain[n_wind];
+    ndom = wind_cell->ndom;
+
     if (zdom[ndom].coord_type == SPHERICAL)
     {
-      spherical_volumes (ndom, wmain);
+      spherical_cell_volume (wind_cell);
     }
     else if (zdom[ndom].coord_type == CYLIND)
     {
-      cylind_volumes (ndom, wmain);
-    }
-    else if (zdom[ndom].coord_type == RTHETA)
-    {
-      /* 13jun -- nsh - 76 - This is a switch to allow one to use
-         the actual zeus grid in the special case of a 'proga' wind
-         in rtheta coordinates We dont need to work out if cells are
-         in the wind, they are known to be in the wind. */
-      if (zdom[ndom].wind_type == HYDRO)
-      {
-        rtheta_hydro_volumes (ndom, wmain);
-      }
-      else
-      {
-        rtheta_volumes (ndom, wmain);
-      }
+      cylind_cell_volume (wind_cell);
     }
     else if (zdom[ndom].coord_type == CYLVAR)
     {
-      cylvar_volumes (ndom, wmain);
+      cylvar_cell_volume (wind_cell);
+    }
+    else if (zdom[ndom].coord_type == RTHETA)
+    {
+      if (zdom[ndom].wind_type == HYDRO)
+      {
+        rtheta_hydro_cell_volume (wind_cell);
+      }
+      else
+      {
+        rtheta_cell_volume (wind_cell);
+      }
     }
     else
     {
-      Error ("define_wind: Don't know how to make volumes for coordinate type %d\n", zdom[ndom].coord_type);
+      Error ("calculate_wind_volumes: unknown coordinate type %d for cell %d in domain %d\n", zdom[ndom].coord_type, n_wind, ndom);
+      Exit (EXIT_FAILURE);
     }
   }
 }
@@ -554,8 +564,6 @@ calculate_wind_volumes (void)
  * The main purpose of this function is to find out how many plasma cells there
  * should be (cells with non-zero volume), and to check that the properties of
  * the wind cells make sense.
- *
- * TODO: this needs to be unwrapped to a loop over NDIM2
  *
  **********************************************************/
 
@@ -608,7 +616,7 @@ complete_wind_grid_creation (void)
       {
         Log ("wind2d: partially in wind cells have been found, so consider increasing resolution\n");
       }
-      Exit (1);
+      Exit (EXIT_FAILURE);
     }
 
     /* Next we need to check that each cell which has volume has in the wind or
@@ -688,6 +696,7 @@ create_wind_grid (void)
   calloc_wind (NDIM2);
 
   /* Assign the domain for each cell in the wind grid */
+  int offset = 0;
   for (ndom = 0; ndom < geo.ndomain; ++ndom)
   {
     for (n = zdom[ndom].nstart; n < zdom[ndom].nstop; ++n)
@@ -695,7 +704,9 @@ create_wind_grid (void)
       wmain[n].ndom = ndom;
       wmain[n].inwind = W_NOT_ASSIGNED;
       wmain[n].dfudge = DFUDGE;
+      wmain[n].nwind = n + offset;
     }
+    offset += zdom[ndom].ndim;
   }
 
   /* The first thing we need to do to is to make the coordinate system of the
@@ -705,20 +716,22 @@ create_wind_grid (void)
    * TODO: both of these work over NDOM
    * */
   make_coordinate_grid ();
+
   calculate_wind_volumes ();    /* this can be expensive */
 
   /* We should now be ready to define the velocity of the grid and related
    * properties */
   define_wind_velocities (n_start, n_stop, n_cells_rank);       /* this can be very expensive */
 
+  /* At this point we should make sure every rank has a completed wind grid */
+  broadcast_wind_grid (n_start, n_stop, n_cells_rank);
+
   /* This wind *should* be fully initialised at this point, so we'll perform
    * some consistency checks to make sure everything is OK. Note that this
    * function is also used to assign the value of NPLASMA (the number of plasma
-   * cells in the wind) */
+   * cells in the wind). This isn't really worth doing in parallel, so we have
+   * kept it serial for now. */
   complete_wind_grid_creation ();
-
-  /* At this point we should make sure every rank has a completed wind grid */
-  broadcast_wind_grid (n_start, n_stop, n_cells_rank);
 }
 
 /**********************************************************/

@@ -358,10 +358,8 @@ cylvar_wind_complete (ndom, w)
 /**********************************************************/
 /**
  * @brief      calculates the wind volume of a cylindrical cell
- * 	allowing for the fact that some cells
  *
- * @param [in] int  ndom   the domain poiinter
- * @param [in,out] WindPtr  w   the entire wind
+ * @param [in,out] WindPtr  w   a single wind cell to calculate the volume for
  * @return   Always returns 0
  *
  * @details
@@ -375,9 +373,7 @@ cylvar_wind_complete (ndom, w)
  **********************************************************/
 
 int
-cylvar_volumes (ndom, w)
-     int ndom;
-     WindPtr w;
+cylvar_cell_volume (WindPtr w)
 {
   int i, j, n;
   int jj, kk;
@@ -387,102 +383,87 @@ cylvar_volumes (ndom, w)
   double dr, dz, x[3];
   double volume;
   double f, g;
-  int ndim, mdim, nstart, nstop;
+  int mdim;
   int ndomain;
 
-
-  ndim = zdom[ndom].ndim;
+  int ndom = w->ndom;
+  n = w->nwind;
   mdim = zdom[ndom].mdim;
-  nstart = zdom[ndom].nstart;
-  nstop = zdom[ndom].nstop;
 
+  wind_n_to_ij (ndom, n, &i, &j);
 
-  /* Initialize all the volumes to 0 */
-  for (n = nstart; n < nstop; n++)
+  /* Encapsulate the grid cell with a rectangle for integrating */
+  rmin = w[n].x[0];
+  if (rmin > w[n + 1].x[0])
+    rmin = w[n + 1].x[0];
+  if (rmin > w[n + mdim].x[0])
+    rmin = w[n + mdim].x[0];
+  if (rmin > w[n + mdim + 1].x[0])
+    rmin = w[n + mdim + 1].x[0];
+
+  rmax = w[n].x[0];
+  if (rmax < w[n + 1].x[0])
+    rmax = w[n + 1].x[0];
+  if (rmax < w[n + mdim].x[0])
+    rmax = w[n + mdim].x[0];
+  if (rmax < w[n + mdim + 1].x[0])
+    rmax = w[n + mdim + 1].x[0];
+
+  zmin = w[n].x[2];
+  if (zmin > w[n + 1].x[2])
+    zmin = w[n + 1].x[2];
+  if (zmin > w[n + mdim].x[2])
+    zmin = w[n + mdim].x[2];
+  if (zmin > w[n + mdim + 1].x[2])
+    zmin = w[n + mdim + 1].x[2];
+
+  zmax = w[n].x[2];
+  if (zmax < w[n + 1].x[2])
+    zmax = w[n + 1].x[2];
+  if (zmax < w[n + mdim].x[2])
+    zmax = w[n + mdim].x[2];
+  if (zmax < w[n + mdim + 1].x[2])
+    zmax = w[n + mdim + 1].x[2];
+
+  volume = 0;
+  jj = kk = 0;
+  dr = (rmax - rmin) / RESOLUTION;
+  dz = (zmax - zmin) / RESOLUTION;
+  for (r = rmin + dr / 2; r < rmax; r += dr)
   {
-    w[n].vol = 0;
-    w[n].inwind = W_NOT_INWIND;
+    for (z = zmin + dz / 2; z < zmax; z += dz)
+    {
+      x[0] = r;
+      x[1] = 0;
+      x[2] = z;
+      if (bilin (x, w[i * mdim + j].x, w[i * mdim + j + 1].x, w[(i + 1) * mdim + j].x, w[(i + 1) * mdim + j + 1].x, &f, &g) == 0)
+      {
+        kk++;
+        if (where_in_wind (x, &ndomain) == W_ALL_INWIND)
+        {
+          volume += r;
+          jj++;
+        }
+      }
+
+    }
+
   }
 
-  for (i = 0; i < ndim - 1; i++)
+  w->vol = 4. * PI * dr * dz * volume;
+
+  /* OK now make the final assignement of nwind and fix the volumes */
+  if (jj == 0)
   {
-    for (j = 0; j < mdim - 1; j++)
-    {
-      wind_ij_to_n (ndom, i, j, &n);
-
-      /* Encapsulate the grid cell with a rectangle for integrating */
-      rmin = w[n].x[0];
-      if (rmin > w[n + 1].x[0])
-        rmin = w[n + 1].x[0];
-      if (rmin > w[n + mdim].x[0])
-        rmin = w[n + mdim].x[0];
-      if (rmin > w[n + mdim + 1].x[0])
-        rmin = w[n + mdim + 1].x[0];
-
-      rmax = w[n].x[0];
-      if (rmax < w[n + 1].x[0])
-        rmax = w[n + 1].x[0];
-      if (rmax < w[n + mdim].x[0])
-        rmax = w[n + mdim].x[0];
-      if (rmax < w[n + mdim + 1].x[0])
-        rmax = w[n + mdim + 1].x[0];
-
-      zmin = w[n].x[2];
-      if (zmin > w[n + 1].x[2])
-        zmin = w[n + 1].x[2];
-      if (zmin > w[n + mdim].x[2])
-        zmin = w[n + mdim].x[2];
-      if (zmin > w[n + mdim + 1].x[2])
-        zmin = w[n + mdim + 1].x[2];
-
-      zmax = w[n].x[2];
-      if (zmax < w[n + 1].x[2])
-        zmax = w[n + 1].x[2];
-      if (zmax < w[n + mdim].x[2])
-        zmax = w[n + mdim].x[2];
-      if (zmax < w[n + mdim + 1].x[2])
-        zmax = w[n + mdim + 1].x[2];
-
-
-      volume = 0;
-      jj = kk = 0;
-      dr = (rmax - rmin) / RESOLUTION;
-      dz = (zmax - zmin) / RESOLUTION;
-      for (r = rmin + dr / 2; r < rmax; r += dr)
-      {
-        for (z = zmin + dz / 2; z < zmax; z += dz)
-        {
-          x[0] = r;
-          x[1] = 0;
-          x[2] = z;
-          if (bilin (x, w[i * mdim + j].x, w[i * mdim + j + 1].x, w[(i + 1) * mdim + j].x, w[(i + 1) * mdim + j + 1].x, &f, &g) == 0)
-          {
-            kk++;
-            if (where_in_wind (x, &ndomain) == W_ALL_INWIND)
-            {
-              volume += r;
-              jj++;
-            }
-          }
-
-        }
-
-      }
-      w[n].vol = 4. * PI * dr * dz * volume;
-      /* OK now make the final assignement of nwind and fix the volumes */
-      if (jj == 0)
-      {
-        w[n].inwind = W_NOT_INWIND;     // The cell is not in the wind
-      }
-      else if (jj == kk)
-      {
-        w[n].inwind = W_ALL_INWIND;     // All of cell is inwind
-      }
-      else
-      {
-        w[n].inwind = W_PART_INWIND;    // Some of cell is inwind
-      }
-    }
+    w->inwind = W_NOT_INWIND;   // The cell is not in the wind
+  }
+  else if (jj == kk)
+  {
+    w[n].inwind = W_ALL_INWIND; // All of cell is inwind
+  }
+  else
+  {
+    w[n].inwind = W_PART_INWIND;        // Some of cell is inwind
   }
 
   return (0);
