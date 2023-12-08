@@ -47,6 +47,12 @@ jobs:
         cd $PYTHON/examples/gh-workflow/
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+    - name: Run unit test framework
+      run: |
+        cd $PYTHON/source/tests
+        make clean
+        make check CC=gcc
+
     - name: compile helper programs and setup
       run: |
         cd $PYTHON/source/
