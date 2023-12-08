@@ -29,7 +29,7 @@ Wind.model2import                          cv_standard.import.txt
 
 ### Parameters associated with photon number, cycles,ionization and radiative transfer options
 Photons_per_cycle                          1000000
-Ionization_cycles                          15
+Ionization_cycles                          10
 Spectrum_cycles                            10
 Wind.ionization(on.the.spot,ML93,LTE_tr,LTE_te,fixed,matrix_bb,matrix_pow)            matrix_bb
 Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms,macro_atoms_thermal_trapping)     thermal_trapping
