@@ -250,10 +250,8 @@ create_plasma_grid (void)
   int n_start;
   int n_stop;
   int n_cells_rank;
-
   double rrstar;
   double xcen[3];
-
   WindPtr w = wmain;
 
   if (NPLASMA <= 0)             /* Let's be extra safe */
@@ -416,81 +414,6 @@ make_coordinate_grid (void)
 
 /**********************************************************/
 /**
- * @brief Define the velocity properties for each wind cell
- *
- * @details
- *
- * This function is done in a two step process. The first step sets the velocity
- * velocity gradients and gamma factors of the cells. When this is done, we can
- * then compute the divergence of the velocity field, as well as the average
- * dv/ds and maximum dv/ds for each cell.
- *
- * This is done in two steps because the second step needs to know the velocity
- * of neighbouring cells. This is not an issue when done in serial. But when
- * parallelised, the edge cells in a rank's workload will not calculate the
- * correct dv/ds or divergence for vertex properties.
- *
- **********************************************************/
-
-static void
-define_wind_velocities (const int n_start, const int n_stop, const int n_cells_rank)
-{
-  int n_wind;
-  double v_cen[3];
-  WindPtr cell;
-
-  /* Compute the velocity and gradient for each cell. These need to be defined
-   * before we can compute velocity gradients and velocity divergence */
-  for (n_wind = n_start; n_wind < n_stop; ++n_wind)
-  {
-    cell = &wmain[n_wind];
-
-    if (zdom[cell->ndom].wind_type != IMPORT)
-    {
-      model_velocity (cell->ndom, cell->x, cell->v);
-    }
-
-    model_vgrad (cell->ndom, cell->x, cell->v_grad);
-
-    if (rel_mode == REL_MODE_FULL)
-    {
-      cell->xgamma = calculate_gamma_factor (cell->v);
-      model_velocity (cell->ndom, cell->xcen, v_cen);
-      cell->xgamma_cen = calculate_gamma_factor (v_cen);
-      cell->vol *= cell->xgamma_cen;
-    }
-    else
-    {
-      cell->xgamma = 1.0;
-      cell->xgamma_cen = 1.0;
-    }
-  }
-
-  /* Take a break to make sure each rank has the velocity for all cells (see
-   * next comment for reason) */
-  broadcast_wind_velocity (n_start, n_stop, n_cells_rank);
-
-  /* With the velocity defined, we are now able to compute the divergence
-   * and the velocity gradients. These calculations need to know the velocity
-   * in adjacent cells, hence why there is call to communicate the velocities
-   * before this loop */
-  for (n_wind = n_start; n_wind < n_stop; ++n_wind)
-  {
-    cell = &wmain[n_wind];
-
-    /* Calculate the divergence of this specific cell */
-    wind_div_v (cell->ndom, cell);
-
-    /* Now we do two expensive calculations to figure out the direction of
-     * the largest velocity gradient in the cell as well as the angle average
-     * velocity gradient of the cell */
-    dvds_ave (cell->ndom, cell);        /* Defined at cell center */
-    dvds_max (cell->ndom, cell);        /* Defined at cell vertex */
-  }
-}
-
-/**********************************************************/
-/**
  * @brief Compute the volumes of each cell in the wind grid.
  *
  * @details
@@ -501,55 +424,39 @@ define_wind_velocities (const int n_start, const int n_stop, const int n_cells_r
  **********************************************************/
 
 static void
-calculate_wind_volumes (void)
+calculate_cell_volume (WindPtr cell)
 {
   int ndom;
-  int n_wind;
-  int n_start;
-  int n_stop;
 
-  WindPtr wind_cell;
+  ndom = cell->ndom;
 
-#ifdef MPI_ON
-  get_parallel_nrange (rank_global, NDIM2, np_mpi_global, &n_start, &n_stop);
-#else
-  n_start = 0;
-  n_stop = NDIM2;
-#endif
-
-  for (n_wind = n_start; n_wind < n_stop; ++n_wind)
+  if (zdom[ndom].coord_type == SPHERICAL)
   {
-    wind_cell = &wmain[n_wind];
-    ndom = wind_cell->ndom;
-
-    if (zdom[ndom].coord_type == SPHERICAL)
+    spherical_cell_volume (cell);
+  }
+  else if (zdom[ndom].coord_type == CYLIND)
+  {
+    cylind_cell_volume (cell);
+  }
+  else if (zdom[ndom].coord_type == CYLVAR)
+  {
+    cylvar_cell_volume (cell);
+  }
+  else if (zdom[ndom].coord_type == RTHETA)
+  {
+    if (zdom[ndom].wind_type == HYDRO)
     {
-      spherical_cell_volume (wind_cell);
-    }
-    else if (zdom[ndom].coord_type == CYLIND)
-    {
-      cylind_cell_volume (wind_cell);
-    }
-    else if (zdom[ndom].coord_type == CYLVAR)
-    {
-      cylvar_cell_volume (wind_cell);
-    }
-    else if (zdom[ndom].coord_type == RTHETA)
-    {
-      if (zdom[ndom].wind_type == HYDRO)
-      {
-        rtheta_hydro_cell_volume (wind_cell);
-      }
-      else
-      {
-        rtheta_cell_volume (wind_cell);
-      }
+      rtheta_hydro_cell_volume (cell);
     }
     else
     {
-      Error ("calculate_wind_volumes: unknown coordinate type %d for cell %d in domain %d\n", zdom[ndom].coord_type, n_wind, ndom);
-      Exit (EXIT_FAILURE);
+      rtheta_cell_volume (cell);
     }
+  }
+  else
+  {
+    Error ("calculate_cell_volume: unknown coordinate type %d for cell %d in domain %d\n", zdom[ndom].coord_type, cell->nwind, ndom);
+    Exit (EXIT_FAILURE);
   }
 }
 
@@ -669,7 +576,7 @@ complete_wind_grid_creation (void)
  *
  * ### Notes ###
  *
- * To speed up grid creation, make_coordinate_grid(), calculate_wind_volumes()
+ * To speed up grid creation, make_coordinate_grid(), calculate_cell_volume()
  * and define_wind_velocities() are all parallelised.
  *
  * TODO: loops over ndomain need to be refactored into loops over NDIM2
@@ -684,6 +591,23 @@ create_wind_grid (void)
   int n_start;
   int n_stop;
   int n_cells_rank;
+  double v_cen[3];
+  WindPtr cell;
+
+  /* Set up indices for starting and ending positions of each wind
+   * domain in the wind grid. Note that zdom[ndom].ndim and zdom[ndom].mdim
+   * should have been already established in `get_grid_params`. The wind grid
+   * hasn't been allocated just yet, as we are counting the number of cells in
+   * the loop which need to be allocated */
+  n = 0;
+  for (ndom = 0; ndom < geo.ndomain; ++ndom)
+  {
+    zdom[ndom].nstart = n;
+    n += zdom[ndom].ndim * zdom[ndom].mdim;
+    zdom[ndom].nstop = n;
+    NDIM2 += zdom[ndom].ndim * zdom[ndom].mdim;
+  }
+  geo.ndim2 = NDIM2;
 
 #ifdef MPI_ON
   n_cells_rank = get_parallel_nrange (rank_global, NDIM2, np_mpi_global, &n_start, &n_stop);
@@ -712,18 +636,52 @@ create_wind_grid (void)
   /* The first thing we need to do to is to make the coordinate system of the
    * grid and then determine the volume of each cell which has been created. The
    * coordinate grid is done first, for obvious reasons, but we need to find
-   * the volume next so we can determine which cells are in/out of the wind.
-   * TODO: both of these work over NDOM
-   * */
+   * the volume next so we can determine which cells are in/out of the wind. */
+
   make_coordinate_grid ();
 
-  calculate_wind_volumes ();    /* this can be expensive */
+  /* The next stages are done in parallel, as calculating volumes and some
+   * velocity gradients is expensive. Within this loop we:
+   *  - create the coordinate grid
+   *  - compute the cell volumes
+   *  - define the velocity, velocity gradients and divergence at cell vertex
+   *  - compute the average and max dv/ds in each cell
+   *  - initialise the gamma factor in each cell
+   * */
+  for (n = n_start; n < n_stop; ++n)
+  {
+    cell = &wmain[n];
+    calculate_cell_volume (cell);
 
-  /* We should now be ready to define the velocity of the grid and related
-   * properties */
-  define_wind_velocities (n_start, n_stop, n_cells_rank);       /* this can be very expensive */
+    if (zdom[cell->ndom].wind_type != IMPORT)
+    {
+      model_velocity (cell->ndom, cell->x, cell->v);
+    }
 
-  /* At this point we should make sure every rank has a completed wind grid */
+    model_vgrad (cell->ndom, cell->x, cell->v_grad);
+    wind_div_v (cell->ndom, cell);
+
+    /* Now we do two expensive calculations to figure out the direction of
+     * the largest velocity gradient in the cell as well as the angle average
+     * velocity gradient of the cell */
+    dvds_ave (cell->ndom, cell);        /* Defined at cell center */
+    dvds_max (cell->ndom, cell);        /* Defined at cell vertex */
+
+    if (rel_mode == REL_MODE_FULL)
+    {
+      cell->xgamma = calculate_gamma_factor (cell->v);
+      model_velocity (cell->ndom, cell->xcen, v_cen);
+      cell->xgamma_cen = calculate_gamma_factor (v_cen);
+      cell->vol *= cell->xgamma_cen;
+    }
+    else
+    {
+      cell->xgamma = 1.0;
+      cell->xgamma_cen = 1.0;
+    }
+  }
+
+  /* Now communicate the cells between ranks */
   broadcast_wind_grid (n_start, n_stop, n_cells_rank);
 
   /* This wind *should* be fully initialised at this point, so we'll perform
@@ -755,20 +713,6 @@ void
 define_wind (void)
 {
   int n;
-  int ndom;
-
-  /* Set up indices for starting and ending positions of each wind
-   * domain in the wind grid. Note that zdom[ndom].ndim and zdom[ndom].mdim
-   * should have been already established in `get_grid_params`. */
-  n = 0;
-  for (ndom = 0; ndom < geo.ndomain; ++ndom)
-  {
-    zdom[ndom].nstart = n;
-    n += zdom[ndom].ndim * zdom[ndom].mdim;
-    zdom[ndom].nstop = n;
-    NDIM2 += zdom[ndom].ndim * zdom[ndom].mdim;
-  }
-  geo.ndim2 = NDIM2;
 
   /* The first thing we need to do is define the wind grid, as this is the base
    * grid everything else shoots off from. The wind grid defines the position
