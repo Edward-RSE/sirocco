@@ -890,9 +890,6 @@ Debug (char *format, ...)
 void
 Exit (int error_code)
 {
-  if (error_code == 0)
-    error_code = EXIT_FAILURE;
-
   Log_flush ();
 
 #ifdef MPI_ON
@@ -901,9 +898,13 @@ Exit (int error_code)
   error_summary_parallel ("summary prior to abort");
 
   if (n_mpi_procs > 1)
+  {
     MPI_Abort (MPI_COMM_WORLD, error_code);
+  }
   else
+  {
     exit (error_code);
+  }
 #else
   Log ("--------------------------------------------------------------------------\n" "Aborting: exiting with error %i\n", error_code);
   error_summary ("summary prior to abort");

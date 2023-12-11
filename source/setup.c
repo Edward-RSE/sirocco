@@ -77,12 +77,12 @@ init_geo ()
   zdom[0].coord_type = CYLIND;
   zdom[0].ndim = 30;
   zdom[0].mdim = 30;
-  zdom[0].log_linear = 0;       /* Set intervals to be logarithmic */
+  zdom[0].log_linear = COORD_TYPE_LOG;  /* Set intervals to be logarithmic */
 
   zdom[1].coord_type = CYLIND;
   zdom[1].ndim = 30;
   zdom[1].mdim = 10;
-  zdom[1].log_linear = 0;       /* Set intervals to be logarithmic */
+  zdom[1].log_linear = COORD_TYPE_LOG;  /* Set intervals to be logarithmic */
 
 
   geo.disk_z0 = geo.disk_z1 = 0.0;

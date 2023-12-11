@@ -629,6 +629,7 @@ create_wind_grid (void)
       wmain[n].inwind = W_NOT_ASSIGNED;
       wmain[n].dfudge = DFUDGE;
       wmain[n].nwind = n + offset;
+      wmain[n].nwind_dom = n;
     }
     offset += zdom[ndom].ndim;
   }

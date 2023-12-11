@@ -71,7 +71,7 @@ main (argc, argv)
   WindPtr w;
 
   double freqmin, freqmax;
-  unsigned int n;
+  int n;
   char values[LINELENGTH], answer[LINELENGTH];
   int get_models ();            // Note: Needed because get_models cannot be included in templates.h
   int dummy_spectype;
@@ -337,7 +337,11 @@ main (argc, argv)
   /* zdom only temporarily needs to be MaxDom. Now that we know the number of domains, we'll reallocate
    * the domain to make it smaller */
   zdom = realloc (zdom, sizeof (domain_dummy) * geo.ndomain);
-
+  if (zdom == NULL)
+  {
+    Error ("python: unable to re-allocate space for domain structure from %d domains to %d domains\n", MaxDom, geo.ndomain);
+    Exit (EXIT_FAILURE);
+  }
 
 /* Get the remainder of the input data.  Note that the next few lines are read from the input file whether or not the windsave file was read in,
    because these are things one would like to be able to change even if we have read in an old windsave file.  init_photons reads in
@@ -345,23 +349,9 @@ main (argc, argv)
    the flow of reading in data.
  */
 
-  /* All operating modes */
   rdpar_comment ("Parameters associated with photon number, cycles,ionization and radiative transfer options");
-  /* Getting the atomic data has been moved here as when it was deeply nested in init_ionization, it made it very
-   * difficult to write unit tests or other tests. The key issue is that init_ionization is initialising too
-   * much all at once, which makes it very difficult to initialise or modify specific things for testing or debug
-   * purposes */
-  if (geo.run_type == RUN_TYPE_NEW)
-  {
-    rdstr ("Atomic_data", geo.atomic_filename);
-  }
   init_photons ();
   init_ionization ();
-  if (geo.run_type == RUN_TYPE_NEW)
-  {
-    setup_atomic_data (geo.atomic_filename);
-  }
-
 
   /* Note: ksl - At this point, SYSTEM_TYPE_PREVIOUS refers both to a restart and to a situation where
    * one is starting from an early wind file as implemented this is quite restrictive about what one
@@ -369,6 +359,13 @@ main (argc, argv)
 
   if (geo.run_type == RUN_TYPE_NEW)
   {
+
+    /* Getting the atomic data has been moved here as when it was deeply nested in init_ionization, it made it very
+     * difficult to write unit tests or other tests. The key issue is that init_ionization is initialising too
+     * much all at once, which makes it very difficult to initialise or modify specific things for testing or debug
+     * purposes */
+    rdstr ("Atomic_data", geo.atomic_filename);
+    setup_atomic_data (geo.atomic_filename);
 
     /* Describe the wind, by calling get_wind_params one or more times
        and then gets params by calling e.g. get_sv_wind_params() */

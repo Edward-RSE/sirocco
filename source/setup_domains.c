@@ -73,11 +73,13 @@ get_domain_params (ndom)
 
   /* Define the coordinate system for the grid and allocate memory for the wind structure */
 
-  strcpy (answer, "cylindrical");
-
   if (geo.system_type == SYSTEM_TYPE_STAR)
   {
     strcpy (answer, "spherical");
+  }
+  else
+  {
+    strcpy (answer, "cylindrical");
   }
 
   zdom[ndom].coord_type = rdchoice ("Wind.coord_system(spherical,cylindrical,polar,cyl_var)", "0,1,2,3", answer);
@@ -95,7 +97,17 @@ get_domain_params (ndom)
       if (zdom[ndom].mdim < 4)
       {
         Error ("python: domain mdim must be at least 4 to allow for boundaries\n");
-        Exit (0);
+        Exit (EXIT_FAILURE);
+      }
+
+      if (zdom[ndom].coord_type == RTHETA)
+      {
+        zdom[ndom].cones_rtheta = calloc (zdom[ndom].mdim, sizeof (cone_dummy));
+        if (zdom[ndom].cones_rtheta == NULL)
+        {
+          Error ("get_domain_params: There is a problem in allocating memory for the r-theta cones structure\n");
+          Exit (EXIT_FAILURE);
+        }
       }
     }
     else

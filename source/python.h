@@ -254,6 +254,9 @@ extern double velocity_electron[3];     // velocity of the electron when thermal
   *
   */
 
+#define COORD_TYPE_LOG 0
+#define COORD_TYPE_LINEAR 1
+
 typedef struct domain
 {
   char name[LINELENGTH];
@@ -821,6 +824,7 @@ typedef struct wind
 {
   int ndom;                     /**< The domain associated with this element of the wind */
   int nwind;                    /**< A self-reference to this cell in the wind structure */
+  int nwind_dom;                /**< The element number of the wind cell in its wind domain */
   int nplasma;                  /**< A cross refrence to the corresponding cell in the plasma structure */
   double x[3];                  /**< position of inner vertex of cell */
   double xcen[3];               /**< position of the "center" of a cell */
