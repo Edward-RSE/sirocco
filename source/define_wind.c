@@ -125,12 +125,15 @@ create_macro_grid (void)
     return;
   }
 
-  /* TODO: set up in parallel */
-  n_start = 0;
-  n_stop = NPLASMA;
-
   calloc_macro (NPLASMA);
   calloc_estimators (NPLASMA);
+
+  /* At this point in time, there is no need to parallelise this step as all
+   * we need to do is set the value of two integers for each macro cell. The
+   * overhead associated with parallelisation and communication surely far
+   * exceeds the time saved doing this in parallel */
+  n_start = 0;
+  n_stop = NPLASMA;
 
   for (n_plasma = n_start; n_plasma < n_stop; ++n_plasma)
   {
@@ -739,11 +742,6 @@ define_wind (void)
     create_macro_grid ();
   }
 
-  /* For purely diagnostic purposes, a very (very) approximate value of
-   * mdot_wind is calculated which can be compared to the input in the
-   * parameter file */
-  calculate_mdot_wind ();
-
   /* We can now clean up any memory used to import a wind */
   for (n = 0; n < geo.ndomain; n++)
   {
@@ -751,5 +749,11 @@ define_wind (void)
     {
       free_import (zdom[n].coord_type, n);
     }
+
   }
+
+  /* For purely diagnostic purposes, a very (very) approximate value of
+   * mdot_wind is calculated which can be compared to the input in the
+   * parameter file */
+  calculate_mdot_wind ();
 }

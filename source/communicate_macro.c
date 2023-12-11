@@ -283,10 +283,7 @@ broadcast_macro_atom_B_matrices (void)
         /* we only communicate the matrix if it is being stored in this cell */
         if (macromain[n].store_matom_matrix == TRUE)
         {
-          for (i = 0; i < nrows; i++)
-          {
-            MPI_Pack (macromain[n].matom_matrix[i], nrows, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-          }
+          MPI_Pack (macromain[n].matom_matrix[0], nrows * nrows, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         }
       }
     }
@@ -305,10 +302,7 @@ broadcast_macro_atom_B_matrices (void)
         /* we only communicate the matrix if it is being stored in this cell */
         if (macromain[n].store_matom_matrix == TRUE)
         {
-          for (i = 0; i < nrows; i++)
-          {
-            MPI_Unpack (commbuffer, size_of_commbuffer, &position, macromain[n].matom_matrix[i], nrows, MPI_DOUBLE, MPI_COMM_WORLD);
-          }
+          MPI_Unpack (commbuffer, size_of_commbuffer, &position, macromain[n].matom_matrix[0], nrows * nrows, MPI_DOUBLE, MPI_COMM_WORLD);
         }
       }
     }

@@ -201,11 +201,7 @@ cleanup_model (const char *root_name)
 
       if (macro_cell->store_matom_matrix == TRUE)
       {
-        for (n_row = 0; n_row < nlevels_macro + 1; ++n_row)
-        {
-          free (macro_cell->matom_matrix[n_row]);
-        }
-        free (macro_cell->matom_matrix);
+        free_and_null ((void **) &macro_cell->matom_matrix);
       }
     }
 
