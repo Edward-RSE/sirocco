@@ -564,6 +564,130 @@ test_sv_cv_wind (void)
 
 /** *******************************************************************************************************************
  *
+ * @brief Test a spherical stellar wind
+ *
+ * @details
+ *
+ * ****************************************************************************************************************** */
+
+void
+test_spherical_star_wind (void)
+{
+  FILE *fp;
+  char test_data_line[TEST_DATA_LENGTH];
+  char test_data_filename[LINELENGTH];
+
+  WindPtr wind_cell;
+  PlasmaPtr plasma_cell;
+
+  const int init_error = initialise_model_for_define_wind ("star");
+  if (init_error)
+  {
+    cleanup_model ("star");
+    CU_FAIL_FATAL ("Unable to initialise star model");
+  }
+
+  /* With the defined, we can try and create the wind */
+  define_wind ();
+
+  /* And now we can compare our created grid to the "ground truth" grid */
+  snprintf (test_data_filename, LINELENGTH, "%s/source/tests/test_data/define_wind/star.grid.txt", PYTHON_ENV);
+  fp = fopen (test_data_filename, "r");
+  if (fp == NULL)
+  {
+    cleanup_model ("star");
+    CU_FAIL_FATAL ("Unable to open test data for star model");
+  }
+
+  int i, inwind;
+  double r, rcen;
+  double v_x, v_y, v_z;
+  double vol, rho, ne, h1, c4;
+  double t_e, t_r;
+  double dv_x_dx, dv_x_dy, dv_x_dz;
+  double dv_y_dx, dv_y_dy, dv_y_dz;
+  double dv_z_dx, dv_z_dy, dv_z_dz;
+  double div_v, dvds_max;
+  double gamma;
+
+  /* Skip the first line */
+  if (fgets (test_data_line, TEST_DATA_LENGTH, fp) == NULL)
+  {
+    CU_FAIL_FATAL ("Unable to read first line of test data");
+  }
+
+  while (fgets (test_data_line, TEST_DATA_LENGTH, fp) != NULL)
+  {
+    /*
+     * We'll read in the following properties:
+     * i r rcen inwind v_x v_y v_z vol rho ne t_e t_r h1 c4 dv_x_dx dv_y_dx dv_z_dx dv_x_dy dv_y_dy dv_z_dy
+     * dv_x_dz dv_y_dz dv_z_dz div_v dvds_max gamma
+     */
+
+    const short n_read = sscanf (test_data_line,
+                                 "%d %le %le %d %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le",
+                                 &i, &r, &rcen, &inwind, &v_x, &v_y, &v_z, &vol, &rho, &ne, &t_e, &t_r, &h1, &c4, &dv_x_dx,
+                                 &dv_y_dx, &dv_z_dx, &dv_x_dy, &dv_y_dy, &dv_z_dy, &dv_x_dz, &dv_y_dz, &dv_z_dz, &div_v, &dvds_max, &gamma);
+    if (n_read != 26)
+    {
+      cleanup_model ("star");
+      CU_FAIL_FATAL ("Test data is in an invalid format");
+    }
+
+    /* Convert wind indices into an n in 1d wmain */
+    wind_cell = &wmain[i];
+    plasma_cell = &plasmamain[wind_cell->nplasma];
+
+    /* cell positions */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->r, r, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->rcen, rcen, FRACTIONAL_ERROR);
+    CU_ASSERT_EQUAL_FATAL (wind_cell->inwind, inwind);
+
+    /* The default behaviour of Python's output tools (e.g. windsave2table) is
+     * to ignore file which are not fully in the wind. So we shall also ignore
+     * them here */
+    if (wind_cell->inwind != W_ALL_INWIND)
+    {
+      continue;
+    }
+
+    /* velocities */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[0], v_x, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[1], v_y, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v[2], v_z, FRACTIONAL_ERROR);
+    /* velocity gradients */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][0], dv_x_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][1], dv_x_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[0][2], dv_x_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][0], dv_y_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][1], dv_y_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[1][2], dv_y_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][0], dv_z_dx, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][1], dv_z_dy, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->v_grad[2][2], dv_z_dz, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->div_v, div_v, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->dvds_max, dvds_max, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (wind_cell->xgamma, gamma, FRACTIONAL_ERROR);
+
+    /* Some things (plasma properties) are stored in plasma cells */
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->rho, rho, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->ne, ne, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->t_e, t_e, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->t_r, t_r, FRACTIONAL_ERROR);
+
+    /* Ion abundances are tested in their number density relative to Hydrogen.
+     * This is the default output option in windsave2table */
+    const double n_h = rho2nh * plasma_cell->rho;
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->density[0] / (n_h * ele[0].abun), h1, FRACTIONAL_ERROR);
+    CU_ASSERT_DOUBLE_FRACTIONAL_EQUAL_FATAL (plasma_cell->density[8] / (n_h * ele[2].abun), c4, FRACTIONAL_ERROR);
+  }
+
+  fclose (fp);
+  cleanup_model ("star");
+}
+
+/** *******************************************************************************************************************
+ *
  * @brief Clean up after the `define_wind` tests have run.
  *
  * @details
@@ -679,7 +803,8 @@ create_define_wind_test_suite (void)
     exit (CU_get_error ());
   }
 
-  if ((CU_add_test (suite, "SV: Cataclysmic Variable", test_sv_cv_wind) == NULL) ||
+  if ((CU_add_test (suite, "Spherical: Supernova", test_spherical_star_wind) == NULL) ||
+      (CU_add_test (suite, "SV: Cataclysmic Variable", test_sv_cv_wind) == NULL) ||
       (CU_add_test (suite, "SV: AGN Macro", test_sv_agn_macro_wind) == NULL))
   {
     fprintf (stderr, "Failed to add tests to `Define Wind` suite\n");
