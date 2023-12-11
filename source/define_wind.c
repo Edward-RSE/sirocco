@@ -749,7 +749,6 @@ define_wind (void)
     {
       free_import (zdom[n].coord_type, n);
     }
-
   }
 
   /* For purely diagnostic purposes, a very (very) approximate value of

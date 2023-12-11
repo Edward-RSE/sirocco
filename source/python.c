@@ -352,6 +352,11 @@ main (argc, argv)
   rdpar_comment ("Parameters associated with photon number, cycles,ionization and radiative transfer options");
   init_photons ();
   init_ionization ();
+  if (geo.run_type == RUN_TYPE_NEW)
+  {
+    setup_atomic_data (geo.atomic_filename);
+  }
+
 
   /* Note: ksl - At this point, SYSTEM_TYPE_PREVIOUS refers both to a restart and to a situation where
    * one is starting from an early wind file as implemented this is quite restrictive about what one
