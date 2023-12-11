@@ -302,7 +302,7 @@ wind_read (filename)
 
   fclose (fptr);
 
-  wind_complete (wmain);
+  wind_complete ();
 
   Log ("Read geometry and wind structures from windsavefile %s\n", filename);
 
@@ -318,7 +318,6 @@ wind_read (filename)
  * @brief      A driver routine that calls coordinate-system specific routines
  * that complete the description of the wind
  *
- * @param [in] WindPtr w  The entire wind
  * @return     Always returns 0
  *
  * @details
@@ -340,39 +339,35 @@ wind_read (filename)
  *
  **********************************************************/
 
-int
-wind_complete (w)
-     WindPtr w;
+void
+wind_complete ()
 {
   int ndom;
-
 
   for (ndom = 0; ndom < geo.ndomain; ndom++)
   {
     if (zdom[ndom].coord_type == SPHERICAL)
     {
-      spherical_wind_complete (ndom, w);
+      spherical_wind_complete (ndom, wmain);
     }
     else if (zdom[ndom].coord_type == CYLIND)
     {
-      cylind_wind_complete (ndom, w);
+      cylind_wind_complete (ndom, wmain);
     }
     else if (zdom[ndom].coord_type == RTHETA)
     {
-      rtheta_wind_complete (ndom, w);
+      rtheta_wind_complete (ndom, wmain);
     }
     else if (zdom[ndom].coord_type == CYLVAR)
     {
-      cylvar_wind_complete (ndom, w);
+      cylvar_wind_complete (ndom, wmain);
     }
     else
     {
       Error ("wind_complete: Don't know how to complete coord_type %d\n", zdom[ndom].coord_type);
       Exit (0);
     }
-
   }
-  return (0);
 }
 
 

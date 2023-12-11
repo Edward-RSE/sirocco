@@ -73,7 +73,7 @@ broadcast_wind_grid (const int n_start, const int n_stop, const int n_cells_rank
   /* We also have to also account for some derived types */
   const int n_cells_max = get_max_cells_per_rank (NDIM2);
   MPI_Pack_size (n_cells_max, wcone_derived_type, MPI_COMM_WORLD, &bytes_wcone);
-  const int comm_buffer_size = calculate_comm_buffer_size (1 + 4 * n_cells_max, n_cells_max * (13 + 3 * 3 + 1 * 9)) + bytes_wcone;
+  const int comm_buffer_size = calculate_comm_buffer_size (1 + 5 * n_cells_max, n_cells_max * (13 + 3 * 3 + 1 * 9)) + bytes_wcone;
   char *comm_buffer = malloc (comm_buffer_size);
 
   for (current_rank = 0; current_rank < np_mpi_global; current_rank++)
@@ -88,6 +88,7 @@ broadcast_wind_grid (const int n_start, const int n_stop, const int n_cells_rank
         cell = &wmain[n_wind];
         MPI_Pack (&n_wind, 1, MPI_INT, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (&cell->ndom, 1, MPI_INT, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
+        MPI_Pack (&cell->nwind_dom, 1, MPI_INT, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (&cell->nplasma, 1, MPI_INT, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (cell->x, 3, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
         MPI_Pack (cell->xcen, 3, MPI_DOUBLE, comm_buffer, comm_buffer_size, &position, MPI_COMM_WORLD);
@@ -123,6 +124,7 @@ broadcast_wind_grid (const int n_start, const int n_stop, const int n_cells_rank
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, &n_wind, 1, MPI_INT, MPI_COMM_WORLD);
         cell = &wmain[n_wind];
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, &cell->ndom, 1, MPI_INT, MPI_COMM_WORLD);
+        MPI_Unpack (comm_buffer, comm_buffer_size, &position, &cell->nwind_dom, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, &cell->nplasma, 1, MPI_INT, MPI_COMM_WORLD);
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, cell->x, 3, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (comm_buffer, comm_buffer_size, &position, cell->xcen, 3, MPI_DOUBLE, MPI_COMM_WORLD);

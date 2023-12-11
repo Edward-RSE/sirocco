@@ -404,12 +404,9 @@ make_coordinate_grid (void)
     else
     {
       Error ("make_coordinate_grid: unknown wind or coordinate type\n");
-      Exit (1);
+      Exit (EXIT_FAILURE);
     }
   }
-
-  /* This populates arrays which map the axes coordinates of the grid */
-  wind_complete (wmain);
 }
 
 /**********************************************************/
@@ -609,14 +606,6 @@ create_wind_grid (void)
   }
   geo.ndim2 = NDIM2;
 
-#ifdef MPI_ON
-  n_cells_rank = get_parallel_nrange (rank_global, NDIM2, np_mpi_global, &n_start, &n_stop);
-#else
-  n_start = 0;
-  n_stop = NDIM2;
-  n_cells_rank = NDIM2;
-#endif
-
   calloc_wind (NDIM2);
 
   /* Assign the domain for each cell in the wind grid */
@@ -634,12 +623,27 @@ create_wind_grid (void)
     offset += zdom[ndom].ndim;
   }
 
-  /* The first thing we need to do to is to make the coordinate system of the
-   * grid and then determine the volume of each cell which has been created. The
-   * coordinate grid is done first, for obvious reasons, but we need to find
-   * the volume next so we can determine which cells are in/out of the wind. */
-
+  /* The first thing we need to do is to create the coordinate grid. We'll do
+   * this in serial, as it's very difficult to untangle this process into
+   * something done in parallel due to data dependencies and how certain/special
+   * wind types are set up in differing ways. At the moment, it is not worth the
+   * overhead or human cost to do this stage (and the next) in parallel */
   make_coordinate_grid ();
+
+  /* With the grid defined, we need to "complete" it by populating some 1d
+   * array of coordinates which are used in the next step to compute some other
+   * properties, namely the volume and boundaries of the grid. This bit is
+   * also tangled up in other serial parts of the code and is also very short.
+   * As above, it is impractical and not worthwhile to parallelise this step */
+  wind_complete ();
+
+#ifdef MPI_ON
+  n_cells_rank = get_parallel_nrange (rank_global, NDIM2, np_mpi_global, &n_start, &n_stop);
+#else
+  n_start = 0;
+  n_stop = NDIM2;
+  n_cells_rank = NDIM2;
+#endif
 
   /* The next stages are done in parallel, as calculating volumes and some
    * velocity gradients is expensive. Within this loop we:
@@ -665,8 +669,8 @@ create_wind_grid (void)
     /* Now we do two expensive calculations to figure out the direction of
      * the largest velocity gradient in the cell as well as the angle average
      * velocity gradient of the cell */
-    dvds_ave (cell->ndom, cell);        /* Defined at cell center */
-    dvds_max (cell->ndom, cell);        /* Defined at cell vertex */
+    calculate_cell_dvds_ave (cell->ndom, cell); /* Defined at cell center */
+    calculate_cell_dvds_max (cell->ndom, cell); /* Defined at cell vertex */
 
     if (rel_mode == REL_MODE_FULL)
     {

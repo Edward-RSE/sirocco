@@ -192,7 +192,7 @@ dvwind_ds_cmf (p)
  * The routine is called during the initialisation process and fills
  * the following elements of wmain
  *
- *  * dvds_ave - the average the absolute value of dvds
+ *  * calculate_cell_dvds_ave - the average the absolute value of dvds
  *
  * There is an advanced mode which prints this information to
  * file.
@@ -201,7 +201,7 @@ dvwind_ds_cmf (p)
 
 
 int
-dvds_ave (int ndom, WindPtr cell)
+calculate_cell_dvds_ave (int ndom, WindPtr cell)
 {
   int n;
   int icell;
@@ -303,7 +303,7 @@ dvds_ave (int ndom, WindPtr cell)
  *
  *  * dvds_max - the maximum value of |dvds|
  *
- * Unlike dvds_ave, these values are at the corners of cells,
+ * Unlike calculate_cell_dvds_ave, these values are at the corners of cells,
  * and are intended to be interpolated.  
  *
  * There is an advanced mode which prints this information to
@@ -314,7 +314,7 @@ dvds_ave (int ndom, WindPtr cell)
  **********************************************************/
 
 int
-dvds_max (int ndom, WindPtr cell)
+calculate_cell_dvds_max (int ndom, WindPtr cell)
 {
   int n;
   int icell;

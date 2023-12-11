@@ -160,7 +160,7 @@ void shell_output_wind_update_diagnostics (double xsum, double psum, double fsum
 /* windsave.c */
 int wind_save (char filename[]);
 int wind_read (char filename[]);
-int wind_complete (WindPtr w);
+void wind_complete ();
 int spec_save (char filename[]);
 int spec_read (char filename[]);
 /* extract.c */
@@ -312,8 +312,8 @@ double zero_emit2 (double t, void *params);
 int levels (PlasmaPtr xplasma, int mode);
 /* gradv.c */
 double dvwind_ds_cmf (PhotPtr p);
-int dvds_ave (int ndom, WindPtr cell);
-int dvds_max (int ndom, WindPtr cell);
+int calculate_cell_dvds_ave (int ndom, WindPtr cell);
+int calculate_cell_dvds_max (int ndom, WindPtr cell);
 double get_dvds_max (PhotPtr p);
 /* anisowind.c */
 int randwind_thermal_trapping (PhotPtr p, int *nnscat);
