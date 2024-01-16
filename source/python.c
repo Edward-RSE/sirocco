@@ -173,7 +173,7 @@ main (argc, argv)
 
 /* Allocate the domain structure */
 
-  zdom = (DomainPtr) calloc (sizeof (domain_dummy), MaxDom);
+  zdom = (DomainPtr) calloc (sizeof (domain_dummy), MAX_DOM);
 
   /* BEGIN GATHERING INPUT DATA */
 
@@ -317,29 +317,27 @@ main (argc, argv)
         geo.ndomain = 1;
         rdint ("Wind.number_of_components", &geo.ndomain);
 
-        if (geo.ndomain > MaxDom)
+        if (geo.ndomain > MAX_DOM)
         {
-          Error ("Maximum number of wind components allowed is %d\n", MaxDom);
+          Error ("Maximum number of wind components allowed is %d\n", MAX_DOM);
           Exit (EXIT_FAILURE);
         }
 
         for (n = 0; n < geo.ndomain; n++)
         {
-
           get_domain_params (n);
-
         }
       }
 
     }
   }
 
-  /* zdom only temporarily needs to be MaxDom. Now that we know the number of domains, we'll reallocate
+  /* zdom only temporarily needs to be MAX_DOM. Now that we know the number of domains, we'll reallocate
    * the domain to make it smaller */
   zdom = realloc (zdom, sizeof (domain_dummy) * geo.ndomain);
   if (zdom == NULL)
   {
-    Error ("python: unable to re-allocate space for domain structure from %d domains to %d domains\n", MaxDom, geo.ndomain);
+    Error ("python: unable to re-allocate space for domain structure from %d domains to %d domains\n", MAX_DOM, geo.ndomain);
     Exit (EXIT_FAILURE);
   }
 

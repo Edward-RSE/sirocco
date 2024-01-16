@@ -921,3 +921,51 @@ cylvar_coord_fraction (ndom, ichoice, x, ii, frac, nelem)
   return (1);
 
 }
+
+
+/**********************************************************/
+/**
+ * @brief
+ *
+ * @return
+ *
+ * @details
+ *
+ *
+ **********************************************************/
+
+void
+cylvar_allocate_domain (int ndom)
+{
+  zdom[ndom].wind_z_var = calloc (zdom[ndom].ndim, sizeof (double *));
+  if (zdom[ndom].wind_z_var == NULL)
+  {
+    Error ("");
+    Exit (EXIT_FAILURE);
+  }
+  zdom[ndom].wind_z_var[0] = calloc (zdom[ndom].ndim * zdom[ndom].mdim, sizeof (double));
+  if (zdom[ndom].wind_z_var[0] == NULL)
+  {
+    Error ("");
+    Exit (EXIT_FAILURE);
+  }
+
+  zdom[ndom].wind_midz_var = calloc (zdom[ndom].ndim, sizeof (double *));
+  if (zdom[ndom].wind_midz_var == NULL)
+  {
+    Error ("");
+    Exit (EXIT_FAILURE);
+  }
+  zdom[ndom].wind_midz_var[0] = calloc (zdom[ndom].ndim * zdom[ndom].mdim, sizeof (double));
+  if (zdom[ndom].wind_midz_var[0] == NULL)
+  {
+    Error ("");
+    Exit (EXIT_FAILURE);
+  }
+
+  for (int row = 1; row < zdom[ndom].ndim; ++row)
+  {
+    zdom[ndom].wind_z_var[row] = zdom[ndom].wind_z_var[row - 1] + zdom[ndom].mdim;
+    zdom[ndom].wind_midz_var[row] = zdom[ndom].wind_midz_var[row - 1] + zdom[ndom].mdim;
+  }
+}

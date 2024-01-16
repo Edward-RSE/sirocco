@@ -123,23 +123,13 @@ init_geo ()
   geo.lamp_post_height = 0.0;   // should only be used if geo.pl_geometry is PL_GEOMETRY_LAMP_POST
   geo.bubble_size = 0.0;        // should only be used if geo.pl_geometry is PL_GEOMETRY_BUBBLE_
 
-
   strcpy (geo.atomic_filename, "data/standard80.dat");
   strcpy (geo.fixed_con_file, "none");
-
-  // Note that geo.model_list is initialized through get_spectype
-
-  /* Initialize a few other variables in python.h */
-  x_axis[0] = 1.0;
-  x_axis[1] = x_axis[2] = 0.0;
-  y_axis[1] = 1.0;
-  y_axis[0] = y_axis[2] = 0.0;
-  z_axis[2] = 1.0;
-  z_axis[1] = z_axis[0] = 0.0;
 
   geo.wcycles = geo.pcycles = 1;
   geo.wcycle = geo.pcycle = 0;
 
+  // Note that geo.model_list is initialized through get_spectype
   geo.model_count = 0;          //The number of models read in
 
   /* We should set the frame ASAP in the geo struct, so the grid initialisation

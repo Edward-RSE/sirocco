@@ -118,6 +118,7 @@ int cylvar_where_in_grid(int ndom, double x[], int ichoice, double *fx, double *
 int cylvar_get_random_location(int n, double x[]);
 int cylvar_extend_density(int ndom, WindPtr w);
 int cylvar_coord_fraction(int ndom, int ichoice, double x[], int ii[], double frac[], int *nelem);
+void cylvar_allocate_domain(int ndom);
 /* cylindrical.c */
 double cylind_ds_in_cell(int ndom, PhotPtr p);
 int cylind_make_grid(int ndom, WindPtr w);
@@ -290,6 +291,7 @@ double calc_te(PlasmaPtr xplasma, double tmin, double tmax);
 double zero_emit(double t);
 double zero_emit2(double t, void *params);
 /* janitor.c */
+void free_domains(void);
 void free_wind_grid(void);
 void free_plasma_grid(void);
 void free_macro_grid(void);
@@ -546,6 +548,7 @@ void setup_atomic_data(const char *atomic_filename);
 double get_disk_params(void);
 /* setup_domains.c */
 int get_domain_params(int ndom);
+void allocate_domain_coords(int ndom);
 int get_wind_params(int ndom);
 int setup_windcone(void);
 int init_windcone(double r, double z, double dzdr, int allow_negative_dzdr, ConePtr one_windcone);

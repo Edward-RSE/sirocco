@@ -256,7 +256,7 @@ initialise_model_for_define_wind (const char *root_name)
     return EXIT_FAILURE;
   }
 
-  zdom = calloc (MaxDom, sizeof (domain_dummy));        /* We'll allocate MaxDom to follow python */
+  zdom = calloc (MAX_DOM, sizeof (domain_dummy));       /* We'll allocate MAX_DOM to follow python */
   if (zdom == NULL)
   {
     fprintf (stderr, "Unable to allocate space for domain structure\n");
@@ -267,9 +267,9 @@ initialise_model_for_define_wind (const char *root_name)
   /* Now when we call the initialisation functions or use rdXXX, the rdchoice_choices
    * for the parameter will come from the parameter file */
   rdint ("Wind.number_of_components", &geo.ndomain);
-  if (geo.ndomain > MaxDom)
+  if (geo.ndomain > MAX_DOM)
   {
-    fprintf (stderr, "Using more domains (%d) in model than MaxDom (%d)\n", geo.ndomain, MaxDom);
+    fprintf (stderr, "Using more domains (%d) in model than MAX_DOM (%d)\n", geo.ndomain, MAX_DOM);
     return EXIT_FAILURE;
   }
   strncpy (rdchoice_answer, "star", LINELENGTH);

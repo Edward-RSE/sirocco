@@ -16,6 +16,42 @@
 
 /**********************************************************/
 /**
+ * @brief  Free memory associated with the domains
+ *
+ * @details
+ *
+ **********************************************************/
+
+void
+free_domains (void)
+{
+  int i;
+
+  for (i = 0; i < geo.ndomain; ++i)
+  {
+    free (zdom[i].wind_x);
+    free (zdom[i].wind_midx);
+    free (zdom[i].wind_z);
+    free (zdom[i].wind_midz);
+
+    if (zdom[i].coord_type == RTHETA)
+    {
+      free (zdom[i].cones_rtheta);
+    }
+    else if (zdom[i].coord_type == CYLVAR)
+    {
+      free (zdom[i].wind_z_var[0]);
+      free (zdom[i].wind_z_var);
+      free (zdom[i].wind_midz_var[0]);
+      free (zdom[i].wind_midz_var);
+    }
+  }
+
+  free (zdom);
+}
+
+/**********************************************************/
+/**
  * @brief  Free memory associated with the wind grid
  *
  * @details
@@ -189,7 +225,7 @@ free_spectra (void)
 void
 clean_on_exit (void)
 {
-  free (zdom);
+  free_domains ();
   free_wind_grid ();
   free_plasma_grid ();
   if (nlevels_macro > 0)
