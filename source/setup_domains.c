@@ -98,8 +98,6 @@ get_domain_params (ndom)
          zdom[ndom].ndim, ndom, NDIM_MAX);
       Exit (EXIT_FAILURE);
     }
-    /* For spherical models, we do not have a z-dimension so no need to allocate
-     * memory */
     if (zdom[ndom].coord_type > SPHERICAL)
     {
       rdint ("Wind.dim.in.z_or_theta.direction", &zdom[ndom].mdim);
@@ -110,21 +108,10 @@ get_domain_params (ndom)
            zdom[ndom].mdim, ndom, NDIM_MAX);
         Exit (EXIT_FAILURE);
       }
-      if (zdom[ndom].mdim < 4)
+      else if (zdom[ndom].mdim < 4)
       {
         Error ("python: domain mdim must be at least 4 to allow for boundaries\n");
         Exit (EXIT_FAILURE);
-      }
-
-      /* Polar coordinates need an additional cones structure in the domain */
-      if (zdom[ndom].coord_type == RTHETA)
-      {
-        zdom[ndom].cones_rtheta = calloc (zdom[ndom].mdim, sizeof (cone_dummy));
-        if (zdom[ndom].cones_rtheta == NULL)
-        {
-          Error ("get_domain_params: There is a problem in allocating memory for the r-theta cones structure\n");
-          Exit (EXIT_FAILURE);
-        }
       }
     }
     else
@@ -133,40 +120,7 @@ get_domain_params (ndom)
     }
   }
 
-
-  zdom[ndom].wind_x = calloc (zdom[ndom].ndim, sizeof (*zdom[ndom].wind_x));
-  if (zdom[ndom].wind_x == NULL)
-  {
-    Error ("Problem allocating memory for x-dim for domain %d\n", ndom);
-    Exit (EXIT_FAILURE);
-  }
-  zdom[ndom].wind_midx = calloc (zdom[ndom].ndim, sizeof (*zdom[ndom].wind_midx));
-  if (zdom[ndom].wind_midx == NULL)
-  {
-    Error ("Problem allocating memory for x-dim for domain %d\n", ndom);
-    Exit (EXIT_FAILURE);
-  }
-
-  zdom[ndom].wind_z = calloc (zdom[ndom].mdim, sizeof (*zdom[ndom].wind_z));
-  if (zdom[ndom].wind_z == NULL)
-  {
-    Error ("Problem allocating memory for z-dim for domain %d\n", ndom);
-    Exit (EXIT_FAILURE);
-  }
-  zdom[ndom].wind_midz = calloc (zdom[ndom].mdim, sizeof (*zdom[ndom].wind_midz));
-  if (zdom[ndom].wind_midz == NULL)
-  {
-    Error ("Problem allocating memory for z-dim for domain %d\n", ndom);
-    Exit (EXIT_FAILURE);
-  }
-
-  allocate_domain_coords (ndom);
-
-  /* In cyl var coordinate systems, we need extra data for the z plane */
-  if (zdom[ndom].coord_type == CYLVAR)
-  {
-    cylvar_allocate_domain (ndom);
-  }
+  allocate_domain_wind_coords (ndom);
 
   /* If we are in advanced then allow the user to modify scale lengths */
   if (modes.iadvanced)
@@ -190,44 +144,58 @@ get_domain_params (ndom)
 
 /**********************************************************/
 /**
- * @brief
+ * @brief Allocate memory for the wind coordinate arrays and for special
+ *        cases for certain coordinate systems.
  *
- * @param [in] ndom  The number (begining with 0) of this particular domain
- * @return  0
+ * @param [in] ndom The domain number to allocate for
+ *
+ * @details
+ *
+ * Memory is allocated for the `wind_x`, `wind_z`, `wind_midx` and `wind_midz`
+ * arrays. For a polar coordinate system an additional wind cone is allocated.
+ * For cylindrical variable coordinate system `wind_z_var` and `wind_midz_var`
+ * are allocated.
+ *
+ * If allocating fails for anything, the program will exit.
  *
 ***********************************************************/
 
 void
-allocate_domain_coords (int ndom)
+allocate_domain_wind_coords (int ndom)
 {
-  zdom[ndom].wind_x = calloc (zdom[ndom].ndim, sizeof (*zdom[ndom].wind_x));
-  if (zdom[ndom].wind_x == NULL)
+  /* Allocate x dimensions */
+  zdom[ndom].wind_x = calloc (zdom[ndom].ndim, sizeof (double));
+  zdom[ndom].wind_midx = calloc (zdom[ndom].ndim, sizeof (double));
+  if (zdom[ndom].wind_x == NULL || zdom[ndom].wind_midx == NULL)
   {
-    Error ("Problem allocating memory for x-dim for domain %d\n", ndom);
-    Exit (EXIT_FAILURE);
-  }
-  zdom[ndom].wind_midx = calloc (zdom[ndom].ndim, sizeof (*zdom[ndom].wind_midx));
-  if (zdom[ndom].wind_midx == NULL)
-  {
-    Error ("Problem allocating memory for x-dim for domain %d\n", ndom);
+    Error ("allocate_domain_wind_coords: Problem allocating memory for x-dim for domain %d\n", ndom);
     Exit (EXIT_FAILURE);
   }
 
-  zdom[ndom].wind_z = calloc (zdom[ndom].mdim, sizeof (*zdom[ndom].wind_z));
-  if (zdom[ndom].wind_z == NULL)
+  /* Allocate z dimensions */
+  zdom[ndom].wind_z = calloc (zdom[ndom].mdim, sizeof (double));
+  zdom[ndom].wind_midz = calloc (zdom[ndom].mdim, sizeof (double));
+  if (zdom[ndom].wind_z == NULL || zdom[ndom].wind_midz == NULL)
   {
-    Error ("Problem allocating memory for z-dim for domain %d\n", ndom);
+    Error ("allocate_domain_wind_coords: Problem allocating memory for z-dim for domain %d\n", ndom);
     Exit (EXIT_FAILURE);
   }
-  zdom[ndom].wind_midz = calloc (zdom[ndom].mdim, sizeof (*zdom[ndom].wind_midz));
-  if (zdom[ndom].wind_midz == NULL)
+
+  /* allocate any special cases */
+  if (zdom[ndom].coord_type == RTHETA)
   {
-    Error ("Problem allocating memory for z-dim for domain %d\n", ndom);
-    Exit (EXIT_FAILURE);
+    zdom[ndom].cones_rtheta = calloc (zdom[ndom].mdim, sizeof (cone_dummy));
+    if (zdom[ndom].cones_rtheta == NULL)
+    {
+      Error ("allocate_domain_wind_coords: Problem allocating memory for the r-theta cone in domain %d\n", ndom);
+      Exit (EXIT_FAILURE);
+    }
+  }
+  else if (zdom[ndom].coord_type == CYLVAR)
+  {
+    cylvar_allocate_domain (ndom);
   }
 }
-
-
 
 /**********************************************************/
 /**   

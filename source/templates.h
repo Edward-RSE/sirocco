@@ -548,7 +548,7 @@ void setup_atomic_data(const char *atomic_filename);
 double get_disk_params(void);
 /* setup_domains.c */
 int get_domain_params(int ndom);
-void allocate_domain_coords(int ndom);
+void allocate_domain_wind_coords(int ndom);
 int get_wind_params(int ndom);
 int setup_windcone(void);
 int init_windcone(double r, double z, double dzdr, int allow_negative_dzdr, ConePtr one_windcone);

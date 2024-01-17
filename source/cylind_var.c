@@ -922,47 +922,43 @@ cylvar_coord_fraction (ndom, ichoice, x, ii, frac, nelem)
 
 }
 
-
 /**********************************************************/
 /**
- * @brief
+ * @brief Allocate memory for a cylindrical variable domain.
  *
- * @return
+ * @param [in] ndom  The domain to allocate for
  *
  * @details
  *
+ * Allocates memory for `wind_z_var` and `wind_midz_var`, both of which are
+ * 2D arrays. Memory for each array should be contiguous, as we are using a
+ * pointer arithmetic trick to allocate the memory required to element 0 and
+ * then manually arranging the memory for the other elements.
  *
  **********************************************************/
 
 void
 cylvar_allocate_domain (int ndom)
 {
+  /* Allocate memory for rows, then allocate enough memory for the entire
+   * array to element 0 */
   zdom[ndom].wind_z_var = calloc (zdom[ndom].ndim, sizeof (double *));
-  if (zdom[ndom].wind_z_var == NULL)
+  zdom[ndom].wind_midz_var = calloc (zdom[ndom].ndim, sizeof (double *));
+  if (zdom[ndom].wind_z_var == NULL || zdom[ndom].wind_midz_var == NULL)
   {
-    Error ("");
+    Error ("cylvar_allocate_domain: failed to allocate memory for cylvar domain coordinates\n");
     Exit (EXIT_FAILURE);
   }
   zdom[ndom].wind_z_var[0] = calloc (zdom[ndom].ndim * zdom[ndom].mdim, sizeof (double));
-  if (zdom[ndom].wind_z_var[0] == NULL)
-  {
-    Error ("");
-    Exit (EXIT_FAILURE);
-  }
-
-  zdom[ndom].wind_midz_var = calloc (zdom[ndom].ndim, sizeof (double *));
-  if (zdom[ndom].wind_midz_var == NULL)
-  {
-    Error ("");
-    Exit (EXIT_FAILURE);
-  }
   zdom[ndom].wind_midz_var[0] = calloc (zdom[ndom].ndim * zdom[ndom].mdim, sizeof (double));
-  if (zdom[ndom].wind_midz_var[0] == NULL)
+  if (zdom[ndom].wind_z_var[0] == NULL || zdom[ndom].wind_midz_var[0])
   {
-    Error ("");
+    Error ("cylvar_allocate_domain: failed to allocate memory for cylvar domain coordinates\n");
     Exit (EXIT_FAILURE);
   }
 
+  /* Now manually rearrange the memory from element 0 to fill out the other
+   * rows with columns */
   for (int row = 1; row < zdom[ndom].ndim; ++row)
   {
     zdom[ndom].wind_z_var[row] = zdom[ndom].wind_z_var[row - 1] + zdom[ndom].mdim;

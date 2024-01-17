@@ -57,6 +57,7 @@ wind_save (filename)
   FILE *fptr;
   char header[LINELENGTH];
   int ndom;
+  int m;
   int n;
 
   if ((fptr = fopen (filename, "w")) == NULL)
@@ -68,21 +69,19 @@ wind_save (filename)
   sprintf (header, "Version %s\n", VERSION);
   n = fwrite (header, sizeof (header), 1, fptr);
   n += fwrite (&geo, sizeof (geo), 1, fptr);
-  n += fwrite (zdom, sizeof (domain_dummy), geo.ndomain, fptr);
 
+  n += fwrite (zdom, sizeof (domain_dummy), geo.ndomain, fptr);
   for (ndom = 0; ndom < geo.ndomain; ++ndom)
   {
-    allocate_domain_coords (ndom);
-    fwrite (zdom[ndom].wind_x, sizeof (*zdom[ndom].wind_x), zdom[ndom].ndim, fptr);
-    fwrite (zdom[ndom].wind_z, sizeof (*zdom[ndom].wind_z), zdom[ndom].mdim, fptr);
-    fwrite (zdom[ndom].wind_midx, sizeof (*zdom[ndom].wind_midx), zdom[ndom].ndim, fptr);
-    fwrite (zdom[ndom].wind_midz, sizeof (*zdom[ndom].wind_midz), zdom[ndom].mdim, fptr);
+    fwrite (zdom[ndom].wind_x, sizeof (double), zdom[ndom].ndim, fptr);
+    fwrite (zdom[ndom].wind_z, sizeof (double), zdom[ndom].mdim, fptr);
+    fwrite (zdom[ndom].wind_midx, sizeof (double), zdom[ndom].ndim, fptr);
+    fwrite (zdom[ndom].wind_midz, sizeof (double), zdom[ndom].mdim, fptr);
 
     if (zdom[ndom].coord_type == CYLVAR)
     {
-      cylvar_allocate_domain (ndom);
-      fwrite (zdom[ndom].wind_z_var, sizeof (*zdom[ndom].wind_z_var), zdom[ndom].ndim * zdom[ndom].mdim, fptr);
-      fwrite (zdom[ndom].wind_midz_var, sizeof (*zdom[ndom].wind_midz_var), zdom[ndom].ndim * zdom[ndom].mdim, fptr);
+      fwrite (zdom[ndom].wind_z_var, sizeof (double), zdom[ndom].ndim * zdom[ndom].mdim, fptr);
+      fwrite (zdom[ndom].wind_midz_var, sizeof (double), zdom[ndom].ndim * zdom[ndom].mdim, fptr);
     }
   }
 
@@ -94,29 +93,23 @@ wind_save (filename)
 /* Write out the variable length arrays
 in the plasma structure */
 
-  for (ndom = 0; ndom < NPLASMA; ndom++)
+  for (m = 0; m < NPLASMA; m++)
   {
-    n += fwrite (plasmamain[ndom].density, sizeof (double), nions, fptr);
-    n += fwrite (plasmamain[ndom].partition, sizeof (double), nions, fptr);
-
-    n += fwrite (plasmamain[ndom].ioniz, sizeof (double), nions, fptr);
-    n += fwrite (plasmamain[ndom].recomb, sizeof (double), nions, fptr);
-    n += fwrite (plasmamain[ndom].inner_recomb, sizeof (double), nions, fptr);
-
-
-    n += fwrite (plasmamain[ndom].scatters, sizeof (int), nions, fptr);
-    n += fwrite (plasmamain[ndom].xscatters, sizeof (double), nions, fptr);
-
-    n += fwrite (plasmamain[ndom].heat_ion, sizeof (double), nions, fptr);
-    n += fwrite (plasmamain[ndom].cool_rr_ion, sizeof (double), nions, fptr);
-    n += fwrite (plasmamain[ndom].cool_dr_ion, sizeof (double), nions, fptr);
-    n += fwrite (plasmamain[ndom].lum_rr_ion, sizeof (double), nions, fptr);
-
-
-    n += fwrite (plasmamain[ndom].levden, sizeof (double), nlte_levels, fptr);
-    n += fwrite (plasmamain[ndom].recomb_simple, sizeof (double), nphot_total, fptr);
-    n += fwrite (plasmamain[ndom].recomb_simple_upweight, sizeof (double), nphot_total, fptr);
-    n += fwrite (plasmamain[ndom].kbf_use, sizeof (double), nphot_total, fptr);
+    n += fwrite (plasmamain[m].density, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].partition, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].ioniz, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].recomb, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].inner_recomb, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].scatters, sizeof (int), nions, fptr);
+    n += fwrite (plasmamain[m].xscatters, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].heat_ion, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].cool_rr_ion, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].cool_dr_ion, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].lum_rr_ion, sizeof (double), nions, fptr);
+    n += fwrite (plasmamain[m].levden, sizeof (double), nlte_levels, fptr);
+    n += fwrite (plasmamain[m].recomb_simple, sizeof (double), nphot_total, fptr);
+    n += fwrite (plasmamain[m].recomb_simple_upweight, sizeof (double), nphot_total, fptr);
+    n += fwrite (plasmamain[m].kbf_use, sizeof (double), nphot_total, fptr);
   }
 
 /* Now write out the macro atom info */
@@ -124,25 +117,23 @@ in the plasma structure */
   if (geo.nmacro)
   {
     n += fwrite (macromain, sizeof (macro_dummy), NPLASMA, fptr);
-    for (ndom = 0; ndom < NPLASMA; ndom++)
+    for (m = 0; m < NPLASMA; m++)
     {
-      n += fwrite (macromain[ndom].jbar, sizeof (double), size_Jbar_est, fptr);
-      n += fwrite (macromain[ndom].jbar_old, sizeof (double), size_Jbar_est, fptr);
-      n += fwrite (macromain[ndom].gamma, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].gamma_old, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].gamma_e, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].gamma_e_old, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].alpha_st, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].alpha_st_old, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].alpha_st_e, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].alpha_st_e_old, sizeof (double), size_gamma_est, fptr);
-      n += fwrite (macromain[ndom].recomb_sp, sizeof (double), size_alpha_est, fptr);
-      n += fwrite (macromain[ndom].recomb_sp_e, sizeof (double), size_alpha_est, fptr);
-      n += fwrite (macromain[ndom].matom_emiss, sizeof (double), nlevels_macro, fptr);
-      n += fwrite (macromain[ndom].matom_abs, sizeof (double), nlevels_macro, fptr);
-
+      n += fwrite (macromain[m].jbar, sizeof (double), size_Jbar_est, fptr);
+      n += fwrite (macromain[m].jbar_old, sizeof (double), size_Jbar_est, fptr);
+      n += fwrite (macromain[m].gamma, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].gamma_old, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].gamma_e, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].gamma_e_old, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].alpha_st, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].alpha_st_old, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].alpha_st_e, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].alpha_st_e_old, sizeof (double), size_gamma_est, fptr);
+      n += fwrite (macromain[m].recomb_sp, sizeof (double), size_alpha_est, fptr);
+      n += fwrite (macromain[m].recomb_sp_e, sizeof (double), size_alpha_est, fptr);
+      n += fwrite (macromain[m].matom_emiss, sizeof (double), nlevels_macro, fptr);
+      n += fwrite (macromain[m].matom_abs, sizeof (double), nlevels_macro, fptr);
     }
-
   }
 
   fclose (fptr);
@@ -198,7 +189,7 @@ wind_read (filename)
      char filename[];
 {
   FILE *fptr;
-  int i;
+  int ndom;
   int n, m;
   char header[LINELENGTH];
   char version[LINELENGTH];
@@ -216,7 +207,6 @@ wind_read (filename)
   /* Now read in the geo structure */
 
   n += fread (&geo, sizeof (geo), 1, fptr);
-
 
   /* Read the atomic data file.  This is necessary to do here in order to establish the 
    * values for the dimensionality of some of the variable length structures, associated 
@@ -240,17 +230,18 @@ wind_read (filename)
   NPLASMA = geo.nplasma;
 
   n += fread (zdom, sizeof (domain_dummy), geo.ndomain, fptr);
-
-  for (i = 0; i < geo.ndomain; ++i)
+  for (ndom = 0; ndom < geo.ndomain; ++ndom)
   {
-    fread (zdom[i].wind_x, sizeof (*zdom[i].wind_x), zdom[i].ndim, fptr);
-    fread (zdom[i].wind_z, sizeof (*zdom[i].wind_z), zdom[i].mdim, fptr);
-    fread (zdom[i].wind_midx, sizeof (*zdom[i].wind_midx), zdom[i].ndim, fptr);
-    fread (zdom[i].wind_midz, sizeof (*zdom[i].wind_midz), zdom[i].mdim, fptr);
-    if (zdom[i].coord_type == CYLVAR)
+    allocate_domain_wind_coords (ndom);
+    fread (zdom[ndom].wind_x, sizeof (double), zdom[ndom].ndim, fptr);
+    fread (zdom[ndom].wind_z, sizeof (double), zdom[ndom].mdim, fptr);
+    fread (zdom[ndom].wind_midx, sizeof (double), zdom[ndom].ndim, fptr);
+    fread (zdom[ndom].wind_midz, sizeof (double), zdom[ndom].mdim, fptr);
+    if (zdom[ndom].coord_type == CYLVAR)
     {
-      fread (zdom[i].wind_z_var, sizeof (*zdom[i].wind_z_var), zdom[i].ndim * zdom[i].mdim, fptr);
-      fread (zdom[i].wind_midz_var, sizeof (*zdom[i].wind_midz_var), zdom[i].ndim * zdom[i].mdim, fptr);
+      cylvar_allocate_domain (ndom);
+      fread (zdom[ndom].wind_z_var, sizeof (double), zdom[ndom].ndim * zdom[ndom].mdim, fptr);
+      fread (zdom[ndom].wind_midz_var, sizeof (double), zdom[ndom].ndim * zdom[ndom].mdim, fptr);
     }
   }
 
@@ -269,7 +260,6 @@ wind_read (filename)
   /*Allocate space for the dynamically allocated plasma arrays */
 
   calloc_dyn_plasma (NPLASMA);
-
 
   /* Read in the dynamically allocated plasma arrays */
 
