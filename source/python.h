@@ -131,7 +131,7 @@ extern int NWAVE_NOW;         /**< Either NWAVE_IONIZ or NWAVE_EXTRACT depending
                                 */
 #define NWAVE_MIN   100       /**< The minimum number of wavelength bins in during spectral cycles
                                */
-#define MAXSCAT    2000
+#define MAXSCAT    100000
 
 /* Define the structures */
 #include "math_struc.h"
@@ -150,16 +150,16 @@ extern int NWAVE_NOW;         /**< Either NWAVE_IONIZ or NWAVE_EXTRACT depending
 #define SPECTYPE_BB      -1
 #define SPECTYPE_UNIFORM -2
 #define SPECTYPE_POW     -4
-#define SPECTYPE_CL_TAB  -5   // This is to emulate cloudy
+#define SPECTYPE_CL_TAB  -5     // This is to emulate cloudy
 #define SPECTYPE_BREM    -6
 #define SPECTYPE_MONO    -7
 #define SPECTYPE_NONE	   -3
-#define SPECTYPE_BB_FCOL -8     // colour corrected blackbody 
+#define SPECTYPE_BB_FCOL -8     // colour corrected blackbody
 #define SPECTYPE_MODEL	 -99    // This is just used briefly, before a model number is assigned
 
 /* definitions of types of colour correction */
 #define FCOL_OFF  0
-#define FCOL_DONE 1 
+#define FCOL_DONE 1
 
 /* Number of model_lists that one can have, should be the same as NCOMPS in models.h */
 #define NCOMPS 	10
@@ -1047,7 +1047,8 @@ typedef struct plasma
                                                         in BF_SIMPLE_EMISSIVITY_APPROACH
                                                         */
 #define N_PHOT_PROC 500
-  int n_bf_in[N_PHOT_PROC],n_bf_out[N_PHOT_PROC];/**<Counters to track bf excitations and de-exitations.
+  int n_bf_in[N_PHOT_PROC], n_bf_out[N_PHOT_PROC];
+                                                 /**<Counters to track bf excitations and de-exitations.
                                                    */
 
   double comp_nujnu;            /**<  The integral of alpha(nu)nuj(nu) used to
