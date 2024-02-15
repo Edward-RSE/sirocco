@@ -225,6 +225,9 @@ bf_estimators_increment (one, p, ds)
 
   xplasma->heat_ff += heat_contribution = y;    // record ff hea        
 
+  /* This heat contribution is also the contibution to making k-packets in this volume. So we record it. */
+
+  xplasma->kpkt_abs += heat_contribution;       /* don't want compton to contribute */
 
   /* Now for contribution to heating due to compton processes. (JM, Sep 013) */
 
@@ -247,9 +250,7 @@ bf_estimators_increment (one, p, ds)
 
 
 
-  /* This heat contribution is also the contibution to making k-packets in this volume. So we record it. */
 
-  xplasma->kpkt_abs += heat_contribution;
 
 
   /* Now for contribution to inner shell ionization estimators (SS, Dec 08) */
