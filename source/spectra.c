@@ -29,10 +29,10 @@ int spec_initialized = FALSE;
  *
  * @details
  *
- * NWAVE_MAX bins is always allocated. 
+ * NWAVE_MAX bins is always allocated.
  * The number bins actually used may differ from this, and
  * moreover the number of bins during the ionization and spectral
- * cycles can differ.                               
+ * cycles can differ.
  *
  ********************************************************/
 
@@ -538,9 +538,9 @@ spectrum_create (p, nangle, select_extract)
       xxspec[SPEC_EMITTED].nphot[istat]++;
       spectype = p[nphot].origin;
 
-      /* When a photon that originated for example in the BL which has a type of PTYPE_BL is scattered in the wind by 
+      /* When a photon that originated for example in the BL which has a type of PTYPE_BL is scattered in the wind by
        * a macro atom it's type is increased by 10.  When we want to construct a spectrum for photons originating
-       * from the boundary layer we need to subtract 10 from the type.    See python.h 
+       * from the boundary layer we need to subtract 10 from the type.    See python.h
        */
       if (spectype >= 10)
         spectype -= 10;
@@ -644,7 +644,7 @@ spectrum_create (p, nangle, select_extract)
   }
 
   /* At this point all of the spectra have been incremented and so we performe a simple check on the number of
-     photons were lost and then we print out some statistics having to do with the number of 
+     photons were lost and then we print out some statistics having to do with the number of
      scatters each photon has undergone.
    */
 
@@ -672,21 +672,21 @@ spectrum_create (p, nangle, select_extract)
   }
 
   Log ("\nNo. of photons which have scattered n times.     The max number of scatters seen was %d\n", max_scat);
-
-  for (j = 0; j <= max_scat; j++)
-  {
-    Log ("%-9.3g", (double) nscat[j]);
-    if ((j % 10) == 9)
-      Log ("\n");
-  }
+  // for (j = 0; j <= max_scat; j++)
+  // {
+  //   Log ("%-9.3g", (double) nscat[j]);
+  //   if ((j % 10) == 9)
+  //     Log ("\n");
+  // }
 
   Log ("\nNumber of photons resonantly scattering n times.  The max number of scatters seen was %d\n", max_res);
-  for (j = 0; j <= max_res; j++)
-  {
-    Log ("%-9.3g", (double) nres[j]);
-    if ((j % 10) == 9)
-      Log ("\n");
-  }
+  // for (j = 0; j <= max_res; j++)
+  // {
+  //   Log ("%-9.3g", (double) nres[j]);
+  //   if ((j % 10) == 9)
+  //     Log ("\n");
+  // }
+
   Log ("\nNo of photons and their fates\n!!PhotFate: ");
   for (j = 0; j < NSTAT; j++)
   {
@@ -720,24 +720,24 @@ spectrum_create (p, nangle, select_extract)
 /**********************************************************/
 /**
  * @brief      add a single photon to a specific spectrum
- * on the fly  
+ * on the fly
  *
  * @param [in] PhoPtr p  A single photon
- * @param [in] int spec_id  The spectrum to be incremented   
+ * @param [in] int spec_id  The spectrum to be incremented
  * @return     Always returns 0
  *
  * @details
  *
- * This routine allows a spectrum to be incremented during 
+ * This routine allows a spectrum to be incremented during
  * during its flight through the wind.  It is necessary
  * for example if one wishes to record when a photon
  * hits the disk (and is reflected).
  *
  * ### Notes ###
- * The routine assumes one wants to use the current 
+ * The routine assumes one wants to use the current
  * frequency/weight of the photon.  If for certain spectra
  * one wants to record the original frequency or weight
- * some additional logic is required.  
+ * some additional logic is required.
  *
  * If spectra are accumulated during the flight of photons
  * through the plasma one needs to avoid double counting
@@ -821,7 +821,7 @@ spec_add_one (p, spec_type)
  *
  * @details
  * This simple routine simply writes the spectra to a file in an easily interpretable
- * ascii format.  The spectra will have already been created (using spectrum_create). 
+ * ascii format.  The spectra will have already been created (using spectrum_create).
  *
  * Normally one would write all of the spectra in one go, but  one can use
  * spectrum summary to write various spectra to various files by using the variables
@@ -832,9 +832,9 @@ spec_add_one (p, spec_type)
  *
  * It is called multiple times. In Python, it is currently called at two different
  * locations in the code, once at the
- * end of each ionization cycle  and at the end of each spectrum cycle.               
- * 
- * For the the spectrum cycles, the spectrum is 
+ * end of each ionization cycle  and at the end of each spectrum cycle.
+ *
+ * For the the spectrum cycles, the spectrum is
  * and renormalized so that the overall normalization of the source
  * does not change.  This enables one to plot  the spectrum as the routine
  * is continuing to calculate the detatiled spectra, improving the statistics
@@ -1043,7 +1043,7 @@ spectrum_summary (filename, nspecmin, nspecmax, select_spectype, renorm, loglin,
  * to reduce the fluxes for the spectral cycles that are read
  * in, so we can continue.
  * 	renorm_factor = (cycles in old pf file) / (cycles in new pf file)
- * 
+ *
  * Restarts can also occur when one is just completing a previous
  * run, without increasing the number of cycles, and in this case
  * no renormalization is required.
